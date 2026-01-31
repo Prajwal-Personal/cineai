@@ -33,7 +33,7 @@ const navItems = [
     { icon: BrainCircuit, label: 'Neural Search', path: '/neural-search', highlight: true },
     { icon: Search, label: 'Semantic Search', path: '/search' },
     { icon: AlertTriangle, label: 'Reshoot Risk', path: '/risk', badge: '3' },
-    { icon: GraduationCap, label: 'Training', path: '/training' },
+    { icon: GraduationCap, label: 'Academy', path: '/training' },
     { icon: Download, label: 'Export', path: '/export' },
     { icon: Settings, label: 'Settings', path: '/settings' },
 ];
