@@ -274,6 +274,31 @@ class AudioService:
             if "[laughter]" in transcript.lower() or seed % 8 == 0:
                 behavioral_markers["laughter_detected"] = True
 
+        if transcript:
+            # -- NEW: Vocal Cue Detection --
+            vocal_cues = []
+            cue_keywords = {
+                "ACTION": ["action", "rolling", "roll intro"],
+                "CUT": ["cut", "stop", "wrap for today"],
+                "PRINT IT": ["print it", "perfect take", "exactly what we needed", "wonderful"],
+                "GO AGAIN": ["go again", "try it again", "restart", "once more", "one more for safety"],
+                "SPEED": ["faster", "speed up", "not rush"],
+                "TECHNICAL": ["focus", "light", "battery", "mic", "signal", "levels", "gain", "hum", "cable"]
+            }
+            
+            lower_transcript = transcript.lower()
+            for cue, keywords in cue_keywords.items():
+                for kw in keywords:
+                    if kw in lower_transcript:
+                        vocal_cues.append({
+                            "cue": cue,
+                            "text": kw,
+                            "timestamp": 0.0 # Future: identify timestamp from Whisper segments
+                        })
+                        break # Only one match per category
+            
+            behavioral_markers["vocal_cues"] = vocal_cues
+
         # 3. High-Fidelity Audio Descriptions
         reasoning = f"Acoustic analysis confirm {audio_quality:.1f}% signal integrity. "
         if transcript:
@@ -310,6 +335,11 @@ class AudioService:
         audio_desc = pro_descriptions[seed % len(pro_descriptions)]
         if language in ["hi", "ta"]:
             audio_desc += f" Regional linguistic patterns in {language.upper()} confirmed with high semantic clarity."
+        
+        # Inject mock cues for diversity in mock runs
+        if source == "mock_pool" and not vocal_cues:
+             if seed % 5 == 0: behavioral_markers["vocal_cues"].append({"cue": "PRINT IT", "text": "perfect", "timestamp": 0.0})
+             if seed % 7 == 0: behavioral_markers["vocal_cues"].append({"cue": "ACTION", "text": "action", "timestamp": 0.0})
 
         return {
             "transcript": transcript,

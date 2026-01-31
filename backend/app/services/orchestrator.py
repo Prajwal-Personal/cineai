@@ -234,10 +234,19 @@ class ProcessingOrchestrator:
             
             self._progress[take.id]["logs"].append(f"Inference Engine Results: {emotion_label} (Confidence {max(emotion_weights.values()):.2f})")
             
-            # SAVE EMOTION TO METADATA (Critical for UI)
+            # SAVE EMOTION & VOCAL CUES TO METADATA (Critical for UI)
             meta = dict(take.ai_metadata or {})
             meta["emotion"] = emotion_label
             meta["emotion_confidence"] = float(max(emotion_weights.values()))
+            
+            # Capture Vocal Cues from Audio Service
+            meta["vocal_cues"] = behaviors.get("vocal_cues", [])
+            
+            # Calculate Pacing Signature (words per second)
+            duration = audio_data.get("duration", 0)
+            word_count = len(transcript.split())
+            meta["pacing_signature"] = round(word_count / duration, 2) if duration > 0 else 0.0
+            
             take.ai_metadata = meta
             db.add(take)
             db.commit()

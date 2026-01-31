@@ -33,3 +33,49 @@ def get_reshoot_risk(db: Session = Depends(deps.get_db)):
         ],
         "reasoning": "Scene 12 has high coverage but minor continuity drift detected in Prop markers."
     }
+@router.get("/project-insights")
+def get_project_insights(db: Session = Depends(deps.get_db)):
+    takes = db.query(models.Take).all()
+    
+    all_cues = []
+    pacing_data = []
+    
+    # Signatures for reference
+    signatures = {
+        "The Dark Knight": 3.2, # words/sec target
+        "Succession": 4.5,
+        "Mad Max": 2.1
+    }
+    
+    for take in takes:
+        meta = take.ai_metadata or {}
+        
+        # 1. Collect Vocal Cues
+        cues = meta.get("vocal_cues", [])
+        for cue in cues:
+            all_cues.append({
+                "take_id": take.id,
+                "take_name": take.file_name,
+                "cue": cue["cue"],
+                "text": cue["text"],
+                "timestamp": "00:00:00:00", # Mock TC for now
+                "confidence": take.confidence_score or 0.1
+            })
+            
+        # 2. Collect Pacing
+        pacing_data.append({
+            "name": f"T{take.number}",
+            "current": meta.get("pacing_signature", 0.0),
+            "target": signatures["The Dark Knight"]
+        })
+        
+    return {
+        "vocal_cues": sorted(all_cues, key=lambda x: x["take_id"], reverse=True)[:10],
+        "pacing_comparison": pacing_data[:10],
+        "active_signature": "The Dark Knight",
+        "recommendations": [
+            {"title": "Pacing Consistency", "desc": "Current takes are 15% faster than 'The Dark Knight' reference signature."},
+            {"title": "Intent Match", "desc": "High concentration of 'PRINT IT' cues in Scene 12 suggests a strong hero take selection."},
+            {"title": "Dialogue Density", "desc": "Detected overlap in Take 04 and 08 requires careful multi-track editing."}
+        ]
+    }

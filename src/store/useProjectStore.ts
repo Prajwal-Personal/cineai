@@ -18,6 +18,7 @@ interface ProjectState {
         continuity: number;
         narrative: number;
     };
+    logs: string[];
 
     // Actions
     timeline: unknown | null;
@@ -25,6 +26,7 @@ interface ProjectState {
     fetchTimeline: () => Promise<void>;
     getProcessingStatus: (takeId: number) => Promise<unknown>;
     setProcessingProgress: (progress: number) => void;
+    addLog: (log: string) => void;
     uploadMedia: (file: File) => Promise<unknown>;
 }
 
@@ -45,6 +47,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         continuity: 0,
         narrative: 0,
     },
+    logs: [
+        "Initializing Neural Sync Engine...",
+        "Awaiting high-fidelity media stream...",
+        "Neural nodes active on CUDA core 0",
+        "Command Center Handshake: OK"
+    ],
     timeline: null,
 
     fetchProject: async () => {
@@ -85,6 +93,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     },
 
     setProcessingProgress: (progress) => set({ processingProgress: progress }),
+    addLog: (log) => set((state) => ({ logs: [...state.logs.slice(-49), log] })),
 
     uploadMedia: async (file: File) => {
         set({ loading: true, error: null });

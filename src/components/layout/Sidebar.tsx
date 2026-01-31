@@ -28,11 +28,10 @@ const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
     { icon: Upload, label: 'Media Upload', path: '/upload' },
     { icon: Activity, label: 'AI Monitor', path: '/monitor' },
-    { icon: Film, label: 'Timeline', path: '/timeline' },
+    // Timeline removed
     { icon: FileText, label: 'Script & Coverage', path: '/script' },
     { icon: Smile, label: 'Emotion', path: '/emotion' },
     { icon: ShieldCheck, label: 'Continuity', path: '/continuity' },
-    { icon: BrainCircuit, label: 'Intelligence', path: '/intelligence' },
     { icon: Search, label: 'Semantic Search', path: '/search', highlight: true },
     { icon: AlertTriangle, label: 'Reshoot Risk', path: '/risk', badge: '3' },
     { icon: GraduationCap, label: 'Training', path: '/training' },

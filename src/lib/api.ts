@@ -42,6 +42,7 @@ export const api = {
     intelligence: {
         getHeatmap: (takeId: number) => apiClient.get(`/intelligence/heatmap/${takeId}`),
         getRisk: () => apiClient.get('/intelligence/risk'),
+        getProjectInsights: () => apiClient.get('/intelligence/project-insights'),
     },
     training: {
         getStatus: () => apiClient.get('/training/status'),
