@@ -77,11 +77,12 @@ class NLPService:
         emotion_map = {
             "joy": ["happy", "wonderful", "great", "excellent", "love", "excited", "wow", "amazing", "good", "perfect", "laugh"],
             "sadness": ["sad", "terrible", "bad", "unhappy", "cry", "regret", "lost", "broken", "sorrow", "miss", "alone"],
-            "angry": ["angry", "mad", "hate", "furious", "stop", "never", "annoyed", "frustrated", "yell", "aggressive"],
+            "anger": ["angry", "mad", "hate", "furious", "stop", "never", "annoyed", "frustrated", "yell", "aggressive"],
             "fear": ["scared", "afraid", "danger", "help", "threat", "risk", "panic", "worry", "fear", "dark", "compromised"],
             "disgust": ["gross", "disgusting", "ew", "hate", "sick", "revolt", "nasty", "vile", "appalling"],
-            "surprised": ["whoa", "surprise", "sudden", "unexpected", "what", "shook", "bright", "flash", "instant"],
-            "analytical": ["monitor", "system", "data", "analysis", "technical", "calibrate", "status", "report", "coordinate"]
+            "surprise": ["whoa", "surprise", "sudden", "unexpected", "what", "shook", "bright", "flash", "instant"],
+            "analytical": ["monitor", "system", "data", "analysis", "technical", "calibrate", "status", "report", "coordinate"],
+            "thoughtful": ["pensive", "contemplating", "considering", "listening", "hmm", "well", "think", "thought"]
         }
 
         scores = {emotion: 0 for emotion in emotion_map.keys()}

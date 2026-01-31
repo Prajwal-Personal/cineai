@@ -78,13 +78,17 @@ class SemanticSearchService:
     Supports visual (CLIP) search via integrated visual index.
     """
     
-    INDEX_PATH = "./storage/faiss_index.bin"
-    METADATA_PATH = "./storage/faiss_metadata.pkl"
+    # Absolute path resolution
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # backend folder
+    STORAGE_DIR = os.path.join(BASE_DIR, "storage")
     
-    # Visual index paths (for CLIP embeddings from Colab)
-    VISUAL_INDEX_PATH = "./storage/faiss_visual_index.bin"
-    VISUAL_EMBEDDINGS_PATH = "./storage/video_embeddings.npy"
-    VISUAL_PATHS_PATH = "./storage/video_paths.npy"
+    INDEX_PATH = os.path.join(STORAGE_DIR, "faiss_index.bin")
+    METADATA_PATH = os.path.join(STORAGE_DIR, "faiss_metadata.pkl")
+    
+    # Visual index paths
+    VISUAL_INDEX_PATH = os.path.join(STORAGE_DIR, "faiss_visual_index.bin")
+    VISUAL_EMBEDDINGS_PATH = os.path.join(STORAGE_DIR, "video_embeddings.npy")
+    VISUAL_PATHS_PATH = os.path.join(STORAGE_DIR, "video_paths.npy")
     
     def __init__(self):
         self.dimension = intent_embedding_service.EMBEDDING_DIM
@@ -254,7 +258,7 @@ class SemanticSearchService:
             if filters:
                 if filters.get("take_id") and meta["take_id"] != filters["take_id"]:
                     continue
-                if filters.get("emotion") and meta["emotion_label"] != filters["emotion"]:
+                if filters.get("emotion") and meta.get("emotion_label") != filters["emotion"]:
                     continue
             
             transcript = meta.get("transcript_snippet", "").lower()

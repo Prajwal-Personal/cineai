@@ -35,9 +35,9 @@ class IntentEmbeddingService:
     
     # Emotion vocabulary for embedding
     EMOTION_LABELS = [
-        "neutral", "happy", "sad", "angry", "fearful", "surprised", 
-        "disgusted", "hesitant", "confident", "tense", "relieved",
-        "awkward", "thoughtful", "anxious", "calm"
+        "neutral", "joy", "sadness", "anger", "fear", "surprise", 
+        "disgust", "analytical", "thoughtful", "tense", "relieved",
+        "awkward", "confident", "anxious", "calm"
     ]
     
     # Temporal patterns
@@ -64,16 +64,6 @@ class IntentEmbeddingService:
     ) -> np.ndarray:
         """
         Generate a unified intent embedding for a video moment.
-        
-        Args:
-            transcript_snippet: What was said (from Whisper)
-            emotion_data: Detected emotions (from CV service)
-            audio_features: Audio quality/prosody data (from audio service)
-            timing_data: Pause durations, silence patterns
-            script_context: Surrounding script lines for narrative context
-        
-        Returns:
-            numpy array of shape (EMBEDDING_DIM,)
         """
         model = self._get_model()
         
@@ -84,7 +74,6 @@ class IntentEmbeddingService:
         
         # Generate embedding
         if model == "mock":
-            # Mock embedding for testing without GPU
             np.random.seed(hash(intent_description) % 2**32)
             embedding = np.random.randn(self.EMBEDDING_DIM).astype(np.float32)
             embedding = embedding / np.linalg.norm(embedding)
@@ -103,78 +92,35 @@ class IntentEmbeddingService:
     ) -> str:
         """
         Build a natural language description of the moment's intent.
-        This description is what gets embedded for semantic search.
         """
         parts = []
         
-        # Transcript
         if transcript and transcript.strip():
             parts.append(f"Dialogue: {transcript.strip()}")
         else:
             parts.append("No dialogue, silent moment")
         
-        # Emotion
         if emotion_data:
             emotion = emotion_data.get("primary_emotion", "neutral")
             intensity = emotion_data.get("intensity", 50)
             parts.append(f"Emotion: {emotion} (intensity {intensity}%)")
-            
-            # Secondary emotions
-            if emotion_data.get("secondary_emotions"):
-                secondary = ", ".join(emotion_data["secondary_emotions"][:2])
-                parts.append(f"Also showing: {secondary}")
         
-        # Audio patterns
         if audio_features:
-            if audio_features.get("has_pause_before", False):
-                duration = audio_features.get("pause_before_duration", 0)
-                parts.append(f"Significant hesitation before speaking: {duration:.1f}s of silence")
-            
             if audio_features.get("laughter_detected", False):
                 parts.append("Laughter detected during this moment")
-            
-            if audio_features.get("has_pause_after", False):
-                duration = audio_features.get("pause_after_duration", 0)
-                parts.append(f"Pause after speaking: {duration:.1f}s")
-            
-            if audio_features.get("pitch_pattern"):
-                parts.append(f"Voice pattern: {audio_features['pitch_pattern']}")
-            
             if audio_features.get("speech_rate"):
-                rate = audio_features["speech_rate"]
-                if rate < 100:
-                    parts.append("Speaking slowly, measured pace")
-                elif rate > 180:
-                    parts.append("Speaking quickly, urgent")
+                parts.append(f"Speech rate: {audio_features['speech_rate']}")
         
-        # Timing patterns
         if timing_data:
             pattern = timing_data.get("pattern", "")
             if pattern:
                 parts.append(f"Timing: {pattern.replace('_', ' ')}")
-            
-            reaction_delay = timing_data.get("reaction_delay", 0)
-            if reaction_delay > 0.5:
-                parts.append(f"Delayed reaction: {reaction_delay:.1f}s hesitation")
-        
-        # Script context
-        if script_context:
-            parts.append(f"Script context: {script_context[:100]}")
         
         return ". ".join(parts)
     
     def parse_query_intent(self, query: str) -> Dict[str, Any]:
         """
         Parse an editor's search query to extract intent components.
-        
-        Example: "hesitant reaction before answering"
-        Returns:
-            {
-                "emotion": "hesitant",
-                "temporal": "before",
-                "action": "reaction",
-                "context": "answering"
-            }
         """
         query_lower = query.lower()
         
@@ -186,26 +132,25 @@ class IntentEmbeddingService:
             "narrative_hints": []
         }
         
-        # Detect emotions
         emotion_keywords = {
-            "hesitant": ["hesitant", "hesitation", "uncertain", "unsure"],
-            "tense": ["tense", "tension", "strained", "stressed"],
-            "angry": ["angry", "anger", "furious", "irritated", "frustrated"],
-            "sad": ["sad", "depressed", "melancholy", "tearful"],
-            "happy": ["happy", "joyful", "elated", "pleased", "smiling"],
-            "relieved": ["relieved", "relief", "relaxed"],
-            "awkward": ["awkward", "uncomfortable", "nervous"],
-            "surprised": ["surprised", "shocked", "startled"],
-            "fearful": ["fearful", "afraid", "scared", "terrified"],
-            "confident": ["confident", "assured", "bold"],
-            "laughter": ["laughter", "laugh", "laughing", "giggle", "chuckle", "funny"]
+            "joy": ["joy", "happy", "joyful", "elated", "pleased", "smiling", "laughing", "laughter"],
+            "sadness": ["sad", "sadness", "depressed", "melancholy", "tearful", "crying", "grief"],
+            "anger": ["angry", "anger", "furious", "irritated", "frustrated", "rage", "confrontation"],
+            "fear": ["fearful", "fear", "afraid", "scared", "terrified", "panic", "anxious"],
+            "disgust": ["disgust", "disgusted", "revolted", "gross", "loathing"],
+            "surprise": ["surprised", "surprise", "shocked", "startled", "amazed"],
+            "analytical": ["analytical", "logic", "calculated", "technical", "screen recording"],
+            "thoughtful": ["thoughtful", "pensive", "contemplating", "considering", "listening"],
+            "tense": ["tense", "tension", "strained", "stressed", "uncomfortable"],
+            "relieved": ["relieved", "relief", "relaxed", "safe"],
+            "awkward": ["awkward", "uncomfortable", "nervous", "hesitant"],
+            "confident": ["confident", "assured", "bold", "strong"]
         }
         
         for emotion, keywords in emotion_keywords.items():
             if any(kw in query_lower for kw in keywords):
                 intent["emotions"].append(emotion)
         
-        # Detect temporal cues
         temporal_keywords = {
             "before": ["before", "prior to", "leading up to"],
             "after": ["after", "following", "post"],
@@ -217,31 +162,15 @@ class IntentEmbeddingService:
             if any(kw in query_lower for kw in keywords):
                 intent["temporal_cues"].append(temporal)
         
-        # Detect action types
-        action_keywords = {
-            "reaction": ["reaction", "reacting", "response", "responding"],
-            "speaking": ["speaking", "talking", "saying", "dialogue"],
-            "listening": ["listening", "hearing", "silent"],
-            "interruption": ["interruption", "interrupt", "cutting off"],
-            "reveal": ["reveal", "revealing", "confession", "admitting"]
-        }
-        
-        for action, keywords in action_keywords.items():
-            if any(kw in query_lower for kw in keywords):
-                intent["actions"].append(action)
-        
         return intent
     
     def embed_query(self, query: str) -> np.ndarray:
         """
-        Generate embedding for a search query.
+        Generate embedding for a search query with enhanced intent context.
         """
         model = self._get_model()
-        
-        # Enrich query with parsed intent
         intent = self.parse_query_intent(query)
         
-        # Build enhanced query text
         enhanced_query = query
         if intent["emotions"]:
             enhanced_query += f". Emotion: {', '.join(intent['emotions'])}"
@@ -256,7 +185,6 @@ class IntentEmbeddingService:
             embedding = model.encode(enhanced_query, normalize_embeddings=True)
         
         return embedding.astype(np.float32)
-
 
 # Singleton instance
 intent_embedding_service = IntentEmbeddingService()

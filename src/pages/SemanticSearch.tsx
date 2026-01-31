@@ -23,21 +23,15 @@ interface SearchResult {
     };
 }
 
-interface SearchResponse {
-    query: string;
-    total_results: number;
-    results: SearchResult[];
-}
-
 const SUGGESTION_EXAMPLES = [
-    "hesitant reaction before answering",
-    "tense pause before dialogue",
-    "awkward silence after confession",
-    "relieved smile after conflict",
-    "angry interruption mid-sentence",
-    "thoughtful pause while listening",
-    "surprised reaction to news",
-    "emotional breakdown moment"
+    "intense joy and laughter in the scene",
+    "sad and melancholy reaction",
+    "angry confrontation between characters",
+    "surprised expression after the reveal",
+    "thoughtful pause during dialogue",
+    "analytical breakdown of the technical process",
+    "fearful response to the perimeter breach",
+    "tense silence before the conflict"
 ];
 
 export const SemanticSearch: React.FC = () => {
@@ -51,9 +45,8 @@ export const SemanticSearch: React.FC = () => {
     const [totalResults, setTotalResults] = useState(0);
     const [hasSearched, setHasSearched] = useState(false);
 
-    const emotions = ['hesitant', 'tense', 'angry', 'sad', 'happy', 'relieved', 'awkward', 'surprised'];
+    const emotions = ['joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'analytical', 'thoughtful'];
 
-    // Fetch suggestions as user types
     useEffect(() => {
         if (query.length > 2) {
             const filtered = SUGGESTION_EXAMPLES.filter(s =>
@@ -66,7 +59,7 @@ export const SemanticSearch: React.FC = () => {
     }, [query]);
 
     const handleSearch = useCallback(async () => {
-        if (!query.trim()) return;
+        if (!query.trim() && !selectedEmotion) return;
 
         setIsLoading(true);
         setHasSearched(true);
@@ -79,7 +72,7 @@ export const SemanticSearch: React.FC = () => {
             }
 
             const response = await api.search.intent({
-                query: query.trim(),
+                query: query.trim() || selectedEmotion || "footage",
                 top_k: 20,
                 filters: Object.keys(filters).length > 0 ? filters : null
             });
@@ -119,14 +112,11 @@ export const SemanticSearch: React.FC = () => {
     };
 
     const handleJumpToTimeline = (takeId: number, startTime: number) => {
-        // Navigate to AI Monitor with the specific take selected
-        // In a real app we'd also jump to the timestamp, but let's start with auto-selecting the take
         navigate(`/monitor?takeId=${takeId}`);
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-editor-darker via-editor-dark to-editor-darker p-8">
-            {/* Header */}
             <div className="max-w-6xl mx-auto">
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
@@ -146,11 +136,9 @@ export const SemanticSearch: React.FC = () => {
                     </p>
                 </motion.div>
 
-                {/* Search Box */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.1 }}
                     className="relative mb-8"
                 >
                     <div className="relative group">
@@ -163,7 +151,7 @@ export const SemanticSearch: React.FC = () => {
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                    placeholder='Try: "hesitant reaction before answering"'
+                                    placeholder='Try: "intense joy and laughter"'
                                     className="flex-1 bg-transparent text-white text-lg placeholder:text-editor-muted/50 focus:outline-none py-4"
                                 />
                             </div>
@@ -182,7 +170,6 @@ export const SemanticSearch: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Suggestions Dropdown */}
                     <AnimatePresence>
                         {suggestions.length > 0 && (
                             <motion.div
@@ -206,7 +193,6 @@ export const SemanticSearch: React.FC = () => {
                     </AnimatePresence>
                 </motion.div>
 
-                {/* Filters */}
                 <div className="flex items-center gap-4 mb-8">
                     <button
                         onClick={() => setShowFilters(!showFilters)}
@@ -223,14 +209,14 @@ export const SemanticSearch: React.FC = () => {
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
-                                className="flex items-center gap-2"
+                                className="flex items-center gap-2 flex-wrap"
                             >
                                 <span className="text-editor-muted text-sm">Emotion:</span>
                                 {emotions.map(emotion => (
                                     <button
                                         key={emotion}
                                         onClick={() => setSelectedEmotion(selectedEmotion === emotion ? null : emotion)}
-                                        className={`px-3 py-1 rounded-full text-sm transition-all ${selectedEmotion === emotion
+                                        className={`px-3 py-1 rounded-full text-sm transition-all capitalize ${selectedEmotion === emotion
                                             ? 'bg-purple-500 text-white'
                                             : 'bg-white/5 text-editor-muted hover:bg-white/10'
                                             }`}
@@ -243,12 +229,10 @@ export const SemanticSearch: React.FC = () => {
                     </AnimatePresence>
                 </div>
 
-                {/* Example Queries */}
                 {!hasSearched && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        transition={{ delay: 0.2 }}
                         className="mb-12"
                     >
                         <h3 className="text-editor-muted text-sm font-medium mb-4">Try these example queries:</h3>
@@ -270,7 +254,6 @@ export const SemanticSearch: React.FC = () => {
                     </motion.div>
                 )}
 
-                {/* Results */}
                 {hasSearched && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -278,7 +261,7 @@ export const SemanticSearch: React.FC = () => {
                     >
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-semibold text-white">
-                                {totalResults} Results for "{query}"
+                                {totalResults} Results for "{query || selectedEmotion}"
                             </h2>
                         </div>
 
@@ -299,40 +282,32 @@ export const SemanticSearch: React.FC = () => {
                                         className="bg-editor-dark/50 backdrop-blur border border-white/10 rounded-xl p-6 hover:border-purple-500/30 transition-all group"
                                     >
                                         <div className="flex items-start gap-6">
-                                            {/* Video Player */}
                                             <div className="w-48 h-28 bg-editor-darker rounded-lg flex items-center justify-center flex-shrink-0 relative overflow-hidden group-hover:scale-105 transition-transform border border-white/5">
                                                 {result.video_url ? (
                                                     <video
                                                         src={`${API_BASE_URL.replace('/api/v1', '')}${result.video_url}#t=${result.start_time}`}
                                                         className="w-full h-full object-cover"
-                                                        onMouseEnter={(e) => {
-                                                            const video = e.currentTarget;
-                                                            video.play().catch(() => { }); // Ignore autoplay blocks
-                                                        }}
+                                                        onMouseEnter={(e) => e.currentTarget.play().catch(() => { })}
                                                         onMouseLeave={(e) => {
-                                                            const video = e.currentTarget;
-                                                            video.pause();
-                                                            video.currentTime = result.start_time;
+                                                            e.currentTarget.pause();
+                                                            e.currentTarget.currentTime = result.start_time;
                                                         }}
                                                         muted
                                                         playsInline
-                                                        poster="/api/placeholder/400/225"
                                                     />
                                                 ) : (
                                                     <div className="flex flex-col items-center justify-center">
                                                         <Play className="w-8 h-8 text-white/50 group-hover:text-purple-400 transition-colors" />
                                                         <div className="absolute bottom-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">
-                                                            {formatTime(result.start_time)} - {formatTime(result.end_time)}
+                                                            {formatTime(result.start_time)}
                                                         </div>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {/* Content */}
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-3 mb-2">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getEmotionColor(result.emotion_label)
-                                                        }`}>
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-tight ${getEmotionColor(result.emotion_label)}`}>
                                                         {result.emotion_label}
                                                     </span>
                                                     <span className="text-editor-muted text-sm flex items-center gap-1">
@@ -340,65 +315,59 @@ export const SemanticSearch: React.FC = () => {
                                                         {result.file_name || `Take ${result.take_id}`}
                                                     </span>
                                                     <div className="flex items-center gap-1 ml-auto">
-                                                        <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
+                                                        <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
                                                             <div
                                                                 className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
                                                                 style={{ width: `${result.confidence * 100}%` }}
                                                             />
                                                         </div>
-                                                        <span className="text-sm text-editor-muted">
-                                                            {Math.round(result.confidence * 100)}%
+                                                        <span className="text-[10px] font-bold text-editor-muted uppercase">
+                                                            {Math.round(result.confidence * 100)}% Match
                                                         </span>
                                                     </div>
                                                 </div>
 
                                                 {result.transcript_snippet && (
-                                                    <p className="text-white/80 mb-3 italic">
+                                                    <p className="text-white/80 mb-3 italic text-sm">
                                                         "{result.transcript_snippet}"
                                                     </p>
                                                 )}
 
-                                                {/* Reasoning */}
-                                                <div className="bg-white/5 rounded-lg p-3 mb-3">
-                                                    <div className="flex items-center gap-2 text-purple-400 text-sm font-medium mb-2">
-                                                        <Brain className="w-4 h-4" />
-                                                        Why this matched:
+                                                <div className="bg-white/5 rounded-lg p-3 mb-3 border border-white/5">
+                                                    <div className="flex items-center gap-2 text-purple-400 text-[10px] font-black uppercase tracking-widest mb-2">
+                                                        <Brain className="w-3 h-3" />
+                                                        Why it matched:
                                                     </div>
-                                                    <ul className="text-sm text-editor-muted space-y-1">
+                                                    <ul className="text-xs text-editor-muted space-y-1">
                                                         {result.reasoning.matched_because.map((reason, i) => (
                                                             <li key={i} className="flex items-start gap-2">
-                                                                <ChevronRight className="w-4 h-4 text-purple-400/50 flex-shrink-0 mt-0.5" />
+                                                                <ChevronRight className="w-3 h-3 text-purple-400/50 flex-shrink-0 mt-0.5" />
                                                                 {reason}
                                                             </li>
                                                         ))}
                                                     </ul>
                                                 </div>
 
-                                                {/* Actions */}
                                                 <div className="flex items-center gap-3">
                                                     <button
                                                         onClick={() => handleJumpToTimeline(result.take_id, result.start_time)}
-                                                        className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg text-sm flex items-center gap-2 transition-all"
+                                                        className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-purple-500/30"
                                                     >
-                                                        <Play className="w-4 h-4" />
+                                                        <Play className="w-3 h-3" />
                                                         Jump to Timeline
                                                     </button>
-                                                    <button className="px-4 py-2 bg-white/5 hover:bg-white/10 text-editor-muted hover:text-white rounded-lg text-sm transition-all">
-                                                        Add to Selects
-                                                    </button>
                                                     <div className="flex items-center gap-1 ml-auto">
-                                                        <span className="text-xs text-editor-muted mr-2">Helpful?</span>
                                                         <button
                                                             onClick={() => handleFeedback(result.result_id, true)}
-                                                            className="p-2 hover:bg-green-500/20 rounded-lg transition-colors group"
+                                                            className="p-2 hover:bg-green-500/20 rounded-lg transition-colors"
                                                         >
-                                                            <ThumbsUp className="w-4 h-4 text-editor-muted group-hover:text-green-400" />
+                                                            <ThumbsUp className="w-4 h-4 text-editor-muted hover:text-green-400" />
                                                         </button>
                                                         <button
                                                             onClick={() => handleFeedback(result.result_id, false)}
-                                                            className="p-2 hover:bg-red-500/20 rounded-lg transition-colors group"
+                                                            className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
                                                         >
-                                                            <ThumbsDown className="w-4 h-4 text-editor-muted group-hover:text-red-400" />
+                                                            <ThumbsDown className="w-4 h-4 text-editor-muted hover:text-red-400" />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -415,17 +384,16 @@ export const SemanticSearch: React.FC = () => {
     );
 };
 
-// Helper function for emotion colors
 function getEmotionColor(emotion: string): string {
     const colors: Record<string, string> = {
-        hesitant: 'bg-yellow-500/20 text-yellow-400',
-        tense: 'bg-orange-500/20 text-orange-400',
-        angry: 'bg-red-500/20 text-red-400',
-        sad: 'bg-blue-500/20 text-blue-400',
-        happy: 'bg-green-500/20 text-green-400',
-        relieved: 'bg-teal-500/20 text-teal-400',
-        awkward: 'bg-purple-500/20 text-purple-400',
-        surprised: 'bg-pink-500/20 text-pink-400',
+        joy: 'bg-green-500/20 text-green-400',
+        sadness: 'bg-blue-500/20 text-blue-400',
+        anger: 'bg-red-500/20 text-red-400',
+        fear: 'bg-orange-500/20 text-orange-400',
+        disgust: 'bg-teal-500/20 text-teal-400',
+        surprise: 'bg-pink-500/20 text-pink-400',
+        analytical: 'bg-purple-500/20 text-purple-400',
+        thoughtful: 'bg-yellow-500/20 text-yellow-400',
         neutral: 'bg-gray-500/20 text-gray-400'
     };
     return colors[emotion] || colors.neutral;

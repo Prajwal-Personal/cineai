@@ -186,6 +186,7 @@ class ProcessingOrchestrator:
             nlp_scores = nlp_res.get("scores", {})
             
             # 2. Audio Contribution (30%)
+            behaviors = audio_data.get("behavioral_markers", {})
             audio_emotion = "neutral"
             if behaviors.get("laughter_detected"): audio_emotion = "joy"
             elif behaviors.get("hesitation_duration", 0) > 1.2: audio_emotion = "thoughtful"
@@ -196,7 +197,7 @@ class ProcessingOrchestrator:
             comp = cv_data.get("complexity", "simple")
             
             if energy == "high-intensity":
-                visual_emotion = "surprised" if comp == "intricate" else "angry"
+                visual_emotion = "surprise" if comp == "intricate" else "anger"
             elif energy == "dynamic":
                 visual_emotion = "joy"
             elif comp == "intricate":
@@ -207,8 +208,8 @@ class ProcessingOrchestrator:
             
             # Weighted Voting
             emotion_weights = {
-                "joy": 0.0, "sadness": 0.0, "angry": 0.0, "fear": 0.0, 
-                "disgust": 0.0, "surprised": 0.0, "neutral": 0.0, 
+                "joy": 0.0, "sadness": 0.0, "anger": 0.0, "fear": 0.0, 
+                "disgust": 0.0, "surprise": 0.0, "neutral": 0.0, 
                 "analytical": 0.0, "thoughtful": 0.0
             }
             
@@ -228,7 +229,7 @@ class ProcessingOrchestrator:
             
             # Safety: If all weights are 0, use ID-based variety
             if sum(emotion_weights.values()) == 0:
-                variety_pool = ["neutral", "joy", "thoughtful", "analytical", "sad", "tense"]
+                variety_pool = ["neutral", "joy", "thoughtful", "analytical", "sadness", "anger"]
                 emotion_label = variety_pool[take.id % len(variety_pool)]
             
             self._progress[take.id]["logs"].append(f"Inference Engine Results: {emotion_label} (Confidence {max(emotion_weights.values()):.2f})")
@@ -241,16 +242,46 @@ class ProcessingOrchestrator:
             db.add(take)
             db.commit()
             
-            # Build audio features with behavioral markers
-            behaviors = audio_data.get("behavioral_markers", {})
-            audio_features = {
-                "has_pause_before": behaviors.get("hesitation_duration", 0) > 0,
-                "pause_before_duration": behaviors.get("hesitation_duration", 0),
-                "laughter_detected": behaviors.get("laughter_detected", False),
-                "speech_rate": audio_data.get("quality_score", 150) # Using quality_score as proxy for rate if needed
-            }
+            # -- NEW: 7-Pillar Director's Reasoning --
+            self._progress[take.id]["logs"].append("Synthesizing Director's Reshoot Analysis...")
             
-            # Timing patterns
+            # Generate scores for all 7 pillars
+            scoring_results = scoring_service.compute_take_score(cv_data, audio_data, nlp_res)
+            
+            # Detailed explanation logic for "Why Retake?"
+            reasoning_summary = []
+            pillars = scoring_results["pillars"]
+            critiques = scoring_results["critiques"]
+            
+            if pillars["performance"] < 70:
+                reasoning_summary.append("PERFORMANCE: The emotional beats feel flat or forced. The truthfulness of the moment is missing, suggesting a need for a more authentic delivery.")
+            if pillars["story_clarity"] < 70:
+                reasoning_summary.append("CLARITY: The narrative intent is muddied. Key story points may be confusing for a first-time viewer.")
+            if pillars["technical"] < 70:
+                reasoning_summary.append("TECHNICAL: Inconsistent technical quality detected. Focus or audio clipping issues are significant enough to be deal-breakers.")
+            if pillars["tone_rhythm"] < 70:
+                reasoning_summary.append("RHYTHM: The pacing feels disconnected from the surrounding emotional arc.")
+            if pillars["edit_imagination"] < 70:
+                reasoning_summary.append("EDITABILITY: Limited coverage and awkward blocking will severely restrict editing options.")
+            
+            if not reasoning_summary:
+                reasoning_summary.append("DIRECTOR'S CHOICE: The take lands. Tone, performance, and technicals are in sync. Minor variances are fixable in post.")
+            
+            take.ai_reasoning = {
+                "summary": scoring_results["summary"],
+                "director_notes": reasoning_summary,
+                "pillars": pillars,
+                "critiques": critiques
+            }
+            take.confidence_score = scoring_results["total_score"]
+            take.ai_metadata = meta # Already updated above with emotion
+            
+            db.add(take)
+            db.commit()
+            
+            self._progress[take.id]["logs"].append(f"Reshoot Analysis complete. Final Score: {take.confidence_score}")
+            
+            # Build timing data
             timing_data = {
                 "pattern": "hesitant" if behaviors.get("hesitation_duration", 0) > 1.0 else "normal",
                 "reaction_delay": behaviors.get("hesitation_duration", 0)
@@ -263,7 +294,7 @@ class ProcessingOrchestrator:
             embedding = intent_embedding_service.generate_moment_embedding(
                 transcript_snippet=transcript[:200] if transcript else "",
                 emotion_data={"primary_emotion": emotion_label, "intensity": 60},
-                audio_features=audio_features,
+                audio_features=audio_data,
                 timing_data=timing_data,
                 script_context=""
             )
@@ -283,7 +314,7 @@ class ProcessingOrchestrator:
                 emotion_label=emotion_label,
                 file_name=take.file_name,
                 file_path=take.file_path,
-                audio_features=audio_features,
+                audio_features=audio_data,
                 timing_data=timing_data
             )
             

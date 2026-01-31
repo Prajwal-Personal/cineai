@@ -13,9 +13,9 @@ import { ExportCenter } from './pages/ExportCenter';
 import { SemanticSearch } from './pages/SemanticSearch';
 
 // Additional Placeholders
-const ReshootRisk = () => <div className="p-8"><h1 className="text-3xl font-bold mb-4">Reshoot Risk & Production Insights</h1><p className="text-editor-muted">Analyzing sequence risk factors...</p></div>;
-const TrainingLearning = () => <div className="p-8"><h1 className="text-3xl font-bold mb-4">Training & Learning</h1><p className="text-editor-muted">Fine-tuning AI models on your editing style...</p></div>;
-const Settings = () => <div className="p-8"><h1 className="text-3xl font-bold mb-4">System Settings</h1><p className="text-editor-muted">Configure GPU acceleration and AI model weights...</p></div>;
+import { ReshootRisk } from './pages/ReshootRisk';
+import { TrainingLearning } from './pages/TrainingLearning';
+import { Settings } from './pages/Settings';
 
 function App() {
   return (
