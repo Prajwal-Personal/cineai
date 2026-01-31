@@ -15,6 +15,8 @@ def export_timeline(format: str, db: Session = Depends(deps.get_db)):
     
     timeline_data = timeline_service.assemble_ai_rough_cut(project.id, db)
     
+    from fastapi import Response
+    
     if format.lower() == "xml":
         content = export_service.generate_fcp_xml(timeline_data)
         filename = "SmartCut_Export.xml"
@@ -26,8 +28,10 @@ def export_timeline(format: str, db: Session = Depends(deps.get_db)):
     else:
         raise HTTPException(status_code=400, detail="Unsupported format. Use 'xml' or 'edl'.")
 
-    return {
-        "filename": filename,
-        "content": content,
-        "media_type": media_type
-    }
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )

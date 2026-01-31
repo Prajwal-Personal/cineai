@@ -15,11 +15,13 @@ import {
     ShieldAlert,
     RefreshCw,
     Mic,
+    MicOff,
     Dna,
     Terminal,
     type LucideIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useVoiceSearch } from '../hooks/useVoiceSearch';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LineChart,
@@ -65,6 +67,15 @@ export const Dashboard = () => {
     const [cues, setCues] = useState<VocalCue[]>([]);
     const [pacing, setPacing] = useState<PacingData[]>([]);
     const [signature, setSignature] = useState('');
+
+    const { isListening, toggleListening } = useVoiceSearch({
+        onResult: (transcript, isFinal) => {
+            setSearchQuery(transcript);
+            if (isFinal) {
+                navigate(`/search?q=${transcript}`);
+            }
+        }
+    });
 
     useEffect(() => {
         project.fetchProject();
@@ -140,18 +151,29 @@ export const Dashboard = () => {
                 </div>
                 <input
                     type="text"
-                    placeholder="Search footage by intent... (e.g., 'joyful outdoor scene')"
-                    className="w-full bg-surface-dark border border-white/5 rounded-2xl py-5 pl-12 pr-32 text-lg font-medium text-white placeholder-editor-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all shadow-2xl"
+                    placeholder={isListening ? 'Listening...' : 'Search footage by intent... (e.g., "joyful outdoor scene")'}
+                    className="w-full bg-surface-dark border border-white/5 rounded-2xl py-5 pl-12 pr-48 text-lg font-medium text-white placeholder-editor-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all shadow-2xl"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && navigate(`/search?q=${searchQuery}`)}
                 />
-                <button
-                    onClick={() => navigate(`/search?q=${searchQuery}`)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-primary text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary/80 transition-all shadow-lg shadow-primary/20 active:scale-95"
-                >
-                    Search Intelligence
-                </button>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    <button
+                        onClick={toggleListening}
+                        className={cn(
+                            "p-3 rounded-xl transition-all",
+                            isListening ? "bg-red-500/20 text-red-500 animate-pulse" : "bg-white/5 text-editor-muted hover:text-white"
+                        )}
+                    >
+                        {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                    </button>
+                    <button
+                        onClick={() => navigate(`/search?q=${searchQuery}`)}
+                        className="bg-primary text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary/80 transition-all shadow-lg shadow-primary/20 active:scale-95"
+                    >
+                        Search
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

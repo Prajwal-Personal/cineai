@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Search, Sparkles, Play, Clock, Brain, ChevronRight, ThumbsUp, ThumbsDown, Filter, ArrowRight } from 'lucide-react';
+import { Search, Sparkles, Play, Clock, Brain, ChevronRight, ThumbsUp, ThumbsDown, Filter, ArrowRight, Mic, MicOff } from 'lucide-react';
+import { useVoiceSearch } from '../hooks/useVoiceSearch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { api, API_BASE_URL } from '../lib/api';
@@ -58,8 +59,9 @@ export const SemanticSearch: React.FC = () => {
         }
     }, [query]);
 
-    const handleSearch = useCallback(async () => {
-        if (!query.trim() && !selectedEmotion) return;
+    const handleSearch = useCallback(async (forcedQuery?: string) => {
+        const activeQuery = forcedQuery !== undefined ? forcedQuery : query;
+        if (!activeQuery.trim() && !selectedEmotion) return;
 
         setIsLoading(true);
         setHasSearched(true);
@@ -72,7 +74,7 @@ export const SemanticSearch: React.FC = () => {
             }
 
             const response = await api.search.intent({
-                query: query.trim() || selectedEmotion || "footage",
+                query: activeQuery.trim() || selectedEmotion || "footage",
                 top_k: 20,
                 filters: Object.keys(filters).length > 0 ? filters : null
             });
@@ -87,6 +89,15 @@ export const SemanticSearch: React.FC = () => {
             setIsLoading(false);
         }
     }, [query, selectedEmotion]);
+
+    const { isListening, toggleListening } = useVoiceSearch({
+        onResult: (transcript, isFinal) => {
+            setQuery(transcript);
+            if (isFinal) {
+                handleSearch(transcript);
+            }
+        }
+    });
 
     const handleFeedback = async (resultId: number, isRelevant: boolean) => {
         try {
@@ -151,12 +162,30 @@ export const SemanticSearch: React.FC = () => {
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                    placeholder='Try: "intense joy and laughter"'
+                                    placeholder={isListening ? 'Listening for your intent...' : 'Try: "intense joy and laughter"'}
                                     className="flex-1 bg-transparent text-white text-lg placeholder:text-editor-muted/50 focus:outline-none py-4"
                                 />
+                                {isListening && (
+                                    <div className="flex gap-1 items-center px-4">
+                                        {[1, 2, 3].map(i => (
+                                            <motion.div
+                                                key={i}
+                                                animate={{ scaleY: [1, 2, 1] }}
+                                                transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                                                className="w-1 h-3 bg-purple-400 rounded-full"
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <button
-                                onClick={handleSearch}
+                                onClick={toggleListening}
+                                className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-editor-muted hover:text-white hover:bg-white/5'}`}
+                            >
+                                {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                            </button>
+                            <button
+                                onClick={() => handleSearch()}
                                 disabled={isLoading}
                                 className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl flex items-center gap-2 transition-all disabled:opacity-50"
                             >

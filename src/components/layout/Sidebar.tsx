@@ -29,10 +29,9 @@ const navItems = [
     { icon: Upload, label: 'Media Upload', path: '/upload' },
     { icon: Activity, label: 'AI Monitor', path: '/monitor' },
     // Timeline removed
-    { icon: FileText, label: 'Script & Coverage', path: '/script' },
     { icon: Smile, label: 'Emotion', path: '/emotion' },
-    { icon: ShieldCheck, label: 'Continuity', path: '/continuity' },
-    { icon: Search, label: 'Semantic Search', path: '/search', highlight: true },
+    { icon: BrainCircuit, label: 'Neural Search', path: '/neural-search', highlight: true },
+    { icon: Search, label: 'Semantic Search', path: '/search' },
     { icon: AlertTriangle, label: 'Reshoot Risk', path: '/risk', badge: '3' },
     { icon: GraduationCap, label: 'Training', path: '/training' },
     { icon: Download, label: 'Export', path: '/export' },

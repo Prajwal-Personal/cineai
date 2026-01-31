@@ -5,11 +5,10 @@ import { Dashboard } from './pages/Dashboard';
 import { MediaUpload } from './pages/MediaUpload';
 import { AIMonitor } from './pages/AIMonitor';
 // REMOVED: import { Timeline } from './pages/Timeline';
-import { ScriptCoverage } from './pages/ScriptCoverage';
 import { EmotionPerformance } from './pages/EmotionPerformance';
-import { ContinuityQuality } from './pages/ContinuityQuality';
 import { ExportCenter } from './pages/ExportCenter';
 import { SemanticSearch } from './pages/SemanticSearch';
+import { NeuralVoiceSearch } from './pages/NeuralVoiceSearch';
 
 // Additional Placeholders
 import { ReshootRisk } from './pages/ReshootRisk';
@@ -25,10 +24,9 @@ function App() {
           <Route path="upload" element={<MediaUpload />} />
           <Route path="monitor" element={<AIMonitor />} />
           {/* Timeline removed */}
-          <Route path="script" element={<ScriptCoverage />} />
           <Route path="emotion" element={<EmotionPerformance />} />
-          <Route path="continuity" element={<ContinuityQuality />} />
           <Route path="search" element={<SemanticSearch />} />
+          <Route path="neural-search" element={<NeuralVoiceSearch />} />
           <Route path="risk" element={<ReshootRisk />} />
           <Route path="training" element={<TrainingLearning />} />
           <Route path="export" element={<ExportCenter />} />
