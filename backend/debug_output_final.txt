@@ -1,0 +1,97 @@
+﻿--- Detailed Diagnostic Start ---
+Testing import: app.core.config...
+python : Traceback 
+(most recent call 
+last):
+At line:1 char:13
++ chcp 65001; python 
+debug_pydantic.py > d
+ebug_output_utf8.txt 
+2>&1
++             ~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo   
+           : 
+NotSpecified: (T    
+raceback (most 
+recent     call 
+last)::String)     
+[], RemoteException
+    + 
+FullyQualifiedError  
+  Id : 
+NativeCommandErr    
+or
+ 
+  File "C:\Users\Praj
+w\SampleSmart\backend
+\debug_pydantic.py", 
+line 27, in <module>
+    print(f"\u2705 
+Successfully 
+imported 
+{module_name}")
+    ~~~~~^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^
+  File "C:\Python314\
+Lib\encodings\cp1252.
+py", line 19, in 
+encode
+    return codecs.cha
+rmap_encode(input,sel
+f.errors,encoding_tab
+le)[0]
+           ~~~~~~~~~~
+~~~~~~~~~~~^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^
+UnicodeEncodeError: 
+'charmap' codec 
+can't encode 
+character '\u2705' 
+in position 0: 
+character maps to 
+<undefined>
+
+During handling of 
+the above exception, 
+another exception 
+occurred:
+
+Traceback (most 
+recent call last):
+  File "C:\Users\Praj
+w\SampleSmart\backend
+\debug_pydantic.py", 
+line 29, in <module>
+    print(f"\u274c 
+ERROR in 
+{module_name}: 
+{type(e).__name__}: 
+{e}")
+    ~~~~~^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^
+  File "C:\Python314\
+Lib\encodings\cp1252.
+py", line 19, in 
+encode
+    return codecs.cha
+rmap_encode(input,sel
+f.errors,encoding_tab
+le)[0]
+           ~~~~~~~~~~
+~~~~~~~~~~~^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^
+UnicodeEncodeError: 
+'charmap' codec 
+can't encode 
+character '\u274c' 
+in position 0: 
+character maps to 
+<undefined>
