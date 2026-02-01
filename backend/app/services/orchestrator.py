@@ -180,10 +180,20 @@ class ProcessingOrchestrator:
             # -- NEW: Advanced Multi-Modal Emotion Inference --
             self._progress[take.id]["logs"].append("Initiating Multi-Modal Emotion Inference...")
             
-            # 1. NLP Contribution (40%) - Pass filename for heuristics
-            nlp_res = await nlp_service.analyze_emotion(transcript, take.file_name)
+            # Get video description and detected objects for comprehensive analysis
+            video_description = cv_data.get("video_description", "")
+            detected_objects = cv_data.get("objects", [])
+            
+            # 1. NLP Contribution (40%) - Pass all available data for comprehensive analysis
+            nlp_res = await nlp_service.analyze_emotion(
+                transcript, 
+                take.file_name,
+                video_description=video_description,
+                detected_objects=detected_objects
+            )
             nlp_emotion = nlp_res["emotion"]
             nlp_scores = nlp_res.get("scores", {})
+            detected_emotions = nlp_res.get("detected_emotions", [])
             
             # 2. Audio Contribution (30%)
             behaviors = audio_data.get("behavioral_markers", {})
@@ -250,6 +260,9 @@ class ProcessingOrchestrator:
             meta = dict(take.ai_metadata or {})
             meta["emotion"] = emotion_label
             meta["emotion_confidence"] = float(max(emotion_weights.values()))
+            
+            # Store ALL detected emotions for dual categorization in Behavioral Gallery
+            meta["detected_emotions"] = detected_emotions  # List of {emotion, confidence}
             
             # Capture Vocal Cues from Audio Service
             meta["vocal_cues"] = behaviors.get("vocal_cues", [])

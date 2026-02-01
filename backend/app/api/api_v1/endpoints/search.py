@@ -9,6 +9,8 @@ from pydantic import BaseModel
 from app.api.deps import get_db
 from app.services.semantic_search_service import semantic_search_service, SearchResult
 from app.services.intent_embedding_service import intent_embedding_service
+from app.services.query_expansion_service import query_expansion_service
+from app.models import database as models
 
 router = APIRouter()
 
@@ -26,6 +28,7 @@ class ReasoningResponse(BaseModel):
     timing_pattern: str
     confidence_score: float
     query_intent: Dict
+    query_expansion: Optional[List[str]] = None  # Shows how query was expanded (e.g., "FIR" -> "First Incident Report")
 
 
 class SearchResultResponse(BaseModel):
@@ -46,6 +49,27 @@ class SearchResponse(BaseModel):
     query: str
     total_results: int
     results: List[SearchResultResponse]
+    query_expanded: Optional[List[str]] = None  # Full list of expanded search terms
+
+
+class UnifiedSearchResult(BaseModel):
+    take_id: int
+    file_name: str
+    video_url: str
+    confidence: float
+    match_sources: List[str]
+    transcript_snippet: str
+    emotion: str
+    video_description: str
+    audio_description: str
+
+
+class UnifiedSearchResponse(BaseModel):
+    query: str
+    expanded_terms: List[str]
+    expansion_reasoning: List[str]
+    total_results: int
+    results: List[UnifiedSearchResult]
 
 
 class FeedbackRequest(BaseModel):
@@ -66,6 +90,9 @@ async def search_by_intent(request: SearchRequest, db: Session = Depends(get_db)
     - "tense pause before dialogue"  
     - "awkward silence after confession"
     """
+    # Get expanded terms for response
+    expansion = query_expansion_service.expand_query(request.query)
+    
     results = semantic_search_service.search_by_intent(
         query=request.query,
         top_k=request.top_k,
@@ -75,6 +102,7 @@ async def search_by_intent(request: SearchRequest, db: Session = Depends(get_db)
     return SearchResponse(
         query=request.query,
         total_results=len(results),
+        query_expanded=list(expansion["all_search_terms"])[:10] if expansion["expansion_reasoning"] else None,
         results=[
             SearchResultResponse(
                 result_id=r.result_id,
@@ -91,6 +119,100 @@ async def search_by_intent(request: SearchRequest, db: Session = Depends(get_db)
             )
             for r in results
         ]
+    )
+
+
+@router.post("/unified", response_model=UnifiedSearchResponse)
+async def unified_search(request: SearchRequest, db: Session = Depends(get_db)):
+    """
+    Unified search across all data sources: transcripts, descriptions, emotions, and filenames.
+    Uses LLM-like query expansion so "FIR" and "First Incident Report" yield same results.
+    
+    Example queries:
+    - "FIR" (expands to "First Incident Report", "First Information Report", "police report")
+    - "happy moments" (searches for joy emotions and related keywords)
+    - "screen recording" (finds analytical content)
+    """
+    # Expand query with synonyms and abbreviations
+    expansion = query_expansion_service.expand_query(request.query)
+    expanded_terms = expansion["all_search_terms"]
+    query_emotions = query_expansion_service.get_emotion_mappings(request.query)
+    
+    # Search database directly
+    takes = db.query(models.Take).all()
+    
+    results = []
+    for take in takes:
+        meta = take.ai_metadata or {}
+        cv_data = meta.get("cv", {})
+        audio_data = meta.get("audio", {})
+        
+        # Gather all searchable text
+        transcript = audio_data.get("transcript", "").lower()
+        video_desc = cv_data.get("video_description", "").lower()
+        audio_desc = audio_data.get("audio_description", "").lower()
+        emotion = meta.get("emotion", "neutral").lower()
+        fname = (take.file_name or "").lower()
+        
+        # Combined text for matching
+        combined = f"{transcript} {video_desc} {audio_desc} {fname}"
+        
+        # Calculate match score
+        score = 0
+        match_sources = []
+        
+        for term in expanded_terms:
+            if term in transcript:
+                score += 6
+                if "dialog/transcript" not in match_sources:
+                    match_sources.append("dialog/transcript")
+            if term in video_desc:
+                score += 4
+                if "video_description" not in match_sources:
+                    match_sources.append("video_description")
+            if term in audio_desc:
+                score += 4
+                if "audio_description" not in match_sources:
+                    match_sources.append("audio_description")
+            if term in emotion or term == emotion:
+                score += 5
+                if "emotion" not in match_sources:
+                    match_sources.append("emotion")
+            if term in fname:
+                score += 3
+                if "filename" not in match_sources:
+                    match_sources.append("filename")
+        
+        # Bonus for emotion category match
+        if query_emotions and emotion in query_emotions:
+            score += 8
+            if "emotion_category" not in match_sources:
+                match_sources.append("emotion_category")
+        
+        if score > 0:
+            confidence = min(0.98, 0.4 + (score * 0.04))
+            results.append(UnifiedSearchResult(
+                take_id=take.id,
+                file_name=take.file_name or "",
+                video_url=f"/media_files/{os.path.basename(take.file_path)}" if take.file_path else "",
+                confidence=confidence,
+                match_sources=match_sources,
+                transcript_snippet=audio_data.get("transcript", "")[:200],
+                emotion=emotion,
+                video_description=cv_data.get("video_description", "")[:200],
+                audio_description=audio_data.get("audio_description", "")[:200]
+            ))
+    
+    # Sort by confidence
+    results.sort(key=lambda x: x.confidence, reverse=True)
+    results = results[:request.top_k]
+    
+    return UnifiedSearchResponse(
+        query=request.query,
+        expanded_terms=list(expanded_terms)[:15],
+        expansion_reasoning=expansion["expansion_reasoning"][:5],
+        total_results=len(results),
+        results=results
     )
 
 

@@ -13,10 +13,10 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-# Explicit CORS - More robust than wildcard for production
+# Explicit CORS - Permissive for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_origins=["*"],  # Allow all origins in development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

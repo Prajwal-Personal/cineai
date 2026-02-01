@@ -1,27 +1,29 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Search, Sparkles, Play, Clock, Brain, ChevronRight, ThumbsUp, ThumbsDown, Filter, ArrowRight, Mic, MicOff } from 'lucide-react';
+import { Search, Sparkles, Play, Clock, Brain, ChevronRight, ThumbsUp, ThumbsDown, Filter, ArrowRight, Mic, MicOff, FileText, Video, Music } from 'lucide-react';
 import { useVoiceSearch } from '../hooks/useVoiceSearch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { api, API_BASE_URL } from '../lib/api';
 
-interface SearchResult {
-    result_id: number;
+// Result from unified search (database-direct)
+interface UnifiedSearchResult {
     take_id: number;
-    moment_id: number;
-    start_time: number;
-    end_time: number;
-    confidence: number;
-    transcript_snippet: string;
-    emotion_label: string;
     file_name: string;
     video_url: string;
-    reasoning: {
-        matched_because: string[];
-        emotion_detected: string;
-        timing_pattern: string;
-        confidence_score: number;
-    };
+    confidence: number;
+    match_sources: string[];
+    transcript_snippet: string;
+    emotion: string;
+    video_description: string;
+    audio_description: string;
+}
+
+interface UnifiedSearchResponse {
+    query: string;
+    expanded_terms: string[];
+    expansion_reasoning: string[];
+    total_results: number;
+    results: UnifiedSearchResult[];
 }
 
 const SUGGESTION_EXAMPLES = [
@@ -32,19 +34,24 @@ const SUGGESTION_EXAMPLES = [
     "thoughtful pause during dialogue",
     "analytical breakdown of the technical process",
     "fearful response to the perimeter breach",
-    "tense silence before the conflict"
+    "tense silence before the conflict",
+    "FIR",  // Tests abbreviation expansion
+    "screen recording",
+    "person walking",
 ];
 
 export const SemanticSearch: React.FC = () => {
     const navigate = useNavigate();
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState<SearchResult[]>([]);
+    const [results, setResults] = useState<UnifiedSearchResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showFilters, setShowFilters] = useState(false);
     const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
     const [totalResults, setTotalResults] = useState(0);
     const [hasSearched, setHasSearched] = useState(false);
+    const [expandedTerms, setExpandedTerms] = useState<string[]>([]);
+    const [expansionReasoning, setExpansionReasoning] = useState<string[]>([]);
 
     const emotions = ['joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'analytical', 'thoughtful'];
 
@@ -73,7 +80,9 @@ export const SemanticSearch: React.FC = () => {
                 filters.emotion = selectedEmotion;
             }
 
-            const response = await api.search.intent({
+            // Use unified search endpoint - searches directly from database
+            // across transcripts, descriptions, and emotions with query expansion
+            const response = await api.search.unified({
                 query: activeQuery.trim() || selectedEmotion || "footage",
                 top_k: 20,
                 filters: Object.keys(filters).length > 0 ? filters : null
@@ -81,10 +90,14 @@ export const SemanticSearch: React.FC = () => {
 
             setResults(response.data.results);
             setTotalResults(response.data.total_results);
+            setExpandedTerms(response.data.expanded_terms || []);
+            setExpansionReasoning(response.data.expansion_reasoning || []);
         } catch (error) {
             console.error('Search failed:', error);
             setResults([]);
             setTotalResults(0);
+            setExpandedTerms([]);
+            setExpansionReasoning([]);
         } finally {
             setIsLoading(false);
         }
@@ -294,6 +307,31 @@ export const SemanticSearch: React.FC = () => {
                             </h2>
                         </div>
 
+                        {/* Query Expansion Info */}
+                        {expandedTerms.length > 0 && (
+                            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-6">
+                                <div className="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider mb-2">
+                                    <Sparkles className="w-4 h-4" />
+                                    Query Expanded To:
+                                </div>
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {expandedTerms.slice(0, 10).map((term: string, i: number) => (
+                                        <span key={i} className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded text-xs">
+                                            {term}
+                                        </span>
+                                    ))}
+                                    {expandedTerms.length > 10 && (
+                                        <span className="text-purple-300/50 text-xs">+{expandedTerms.length - 10} more</span>
+                                    )}
+                                </div>
+                                {expansionReasoning.length > 0 && (
+                                    <div className="text-xs text-purple-300/70 italic">
+                                        {expansionReasoning[0]}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {results.length === 0 ? (
                             <div className="text-center py-16 text-editor-muted">
                                 <Brain className="w-16 h-16 mx-auto mb-4 opacity-30" />
@@ -304,7 +342,7 @@ export const SemanticSearch: React.FC = () => {
                             <div className="grid gap-4">
                                 {results.map((result, index) => (
                                     <motion.div
-                                        key={result.result_id}
+                                        key={result.take_id}
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.05 }}
@@ -314,12 +352,12 @@ export const SemanticSearch: React.FC = () => {
                                             <div className="w-48 h-28 bg-editor-darker rounded-lg flex items-center justify-center flex-shrink-0 relative overflow-hidden group-hover:scale-105 transition-transform border border-white/5">
                                                 {result.video_url ? (
                                                     <video
-                                                        src={`${API_BASE_URL.replace('/api/v1', '')}${result.video_url}#t=${result.start_time}`}
+                                                        src={`${API_BASE_URL.replace('/api/v1', '')}${result.video_url}`}
                                                         className="w-full h-full object-cover"
                                                         onMouseEnter={(e) => e.currentTarget.play().catch(() => { })}
                                                         onMouseLeave={(e) => {
                                                             e.currentTarget.pause();
-                                                            e.currentTarget.currentTime = result.start_time;
+                                                            e.currentTarget.currentTime = 0;
                                                         }}
                                                         muted
                                                         playsInline
@@ -327,17 +365,14 @@ export const SemanticSearch: React.FC = () => {
                                                 ) : (
                                                     <div className="flex flex-col items-center justify-center">
                                                         <Play className="w-8 h-8 text-white/50 group-hover:text-purple-400 transition-colors" />
-                                                        <div className="absolute bottom-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">
-                                                            {formatTime(result.start_time)}
-                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
 
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-tight ${getEmotionColor(result.emotion_label)}`}>
-                                                        {result.emotion_label}
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-tight ${getEmotionColor(result.emotion)}`}>
+                                                        {result.emotion}
                                                     </span>
                                                     <span className="text-editor-muted text-sm flex items-center gap-1">
                                                         <Clock className="w-3 h-3" />
@@ -356,44 +391,71 @@ export const SemanticSearch: React.FC = () => {
                                                     </div>
                                                 </div>
 
+                                                {/* Match Sources */}
+                                                <div className="flex flex-wrap gap-1 mb-3">
+                                                    {result.match_sources.map((source: string, i: number) => (
+                                                        <span key={i} className="px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-[10px] uppercase font-bold">
+                                                            {source}
+                                                        </span>
+                                                    ))}
+                                                </div>
+
+                                                {/* Transcript */}
                                                 {result.transcript_snippet && (
-                                                    <p className="text-white/80 mb-3 italic text-sm">
-                                                        "{result.transcript_snippet}"
-                                                    </p>
+                                                    <div className="bg-white/5 rounded-lg p-3 mb-3 border border-white/5">
+                                                        <div className="flex items-center gap-2 text-blue-400 text-[10px] font-black uppercase tracking-widest mb-1">
+                                                            <FileText className="w-3 h-3" />
+                                                            Dialog / Transcript:
+                                                        </div>
+                                                        <p className="text-white/80 italic text-sm">
+                                                            "{result.transcript_snippet}"
+                                                        </p>
+                                                    </div>
                                                 )}
 
-                                                <div className="bg-white/5 rounded-lg p-3 mb-3 border border-white/5">
-                                                    <div className="flex items-center gap-2 text-purple-400 text-[10px] font-black uppercase tracking-widest mb-2">
-                                                        <Brain className="w-3 h-3" />
-                                                        Why it matched:
+                                                {/* Video Description */}
+                                                {result.video_description && (
+                                                    <div className="bg-white/5 rounded-lg p-3 mb-3 border border-white/5">
+                                                        <div className="flex items-center gap-2 text-pink-400 text-[10px] font-black uppercase tracking-widest mb-1">
+                                                            <Video className="w-3 h-3" />
+                                                            Video Description:
+                                                        </div>
+                                                        <p className="text-white/70 text-xs">
+                                                            {result.video_description}
+                                                        </p>
                                                     </div>
-                                                    <ul className="text-xs text-editor-muted space-y-1">
-                                                        {result.reasoning.matched_because.map((reason, i) => (
-                                                            <li key={i} className="flex items-start gap-2">
-                                                                <ChevronRight className="w-3 h-3 text-purple-400/50 flex-shrink-0 mt-0.5" />
-                                                                {reason}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
+                                                )}
+
+                                                {/* Audio Description */}
+                                                {result.audio_description && (
+                                                    <div className="bg-white/5 rounded-lg p-3 mb-3 border border-white/5">
+                                                        <div className="flex items-center gap-2 text-orange-400 text-[10px] font-black uppercase tracking-widest mb-1">
+                                                            <Music className="w-3 h-3" />
+                                                            Audio Description:
+                                                        </div>
+                                                        <p className="text-white/70 text-xs">
+                                                            {result.audio_description}
+                                                        </p>
+                                                    </div>
+                                                )}
 
                                                 <div className="flex items-center gap-3">
                                                     <button
-                                                        onClick={() => handleJumpToTimeline(result.take_id, result.start_time)}
+                                                        onClick={() => handleJumpToTimeline(result.take_id, 0)}
                                                         className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all border border-purple-500/30"
                                                     >
                                                         <Play className="w-3 h-3" />
-                                                        Jump to Timeline
+                                                        View in Monitor
                                                     </button>
                                                     <div className="flex items-center gap-1 ml-auto">
                                                         <button
-                                                            onClick={() => handleFeedback(result.result_id, true)}
+                                                            onClick={() => handleFeedback(result.take_id, true)}
                                                             className="p-2 hover:bg-green-500/20 rounded-lg transition-colors"
                                                         >
                                                             <ThumbsUp className="w-4 h-4 text-editor-muted hover:text-green-400" />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleFeedback(result.result_id, false)}
+                                                            onClick={() => handleFeedback(result.take_id, false)}
                                                             className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
                                                         >
                                                             <ThumbsDown className="w-4 h-4 text-editor-muted hover:text-red-400" />

@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from app.services.intent_embedding_service import intent_embedding_service
 from app.services.visual_embedding_service import visual_embedding_service
+from app.services.query_expansion_service import query_expansion_service
 
 logger = logging.getLogger(__name__)
 
@@ -261,12 +262,28 @@ class SemanticSearchService:
         })
 
     def _keyword_search(self, query: str, top_k: int, filters: Dict = None) -> List[SearchResult]:
-        """Simple keyword-based retrieval for when FAISS/Embeddings are unavailable."""
-        query_terms = query.lower().split()
+        """
+        Enhanced keyword search with LLM-like query expansion.
+        Searches transcripts, descriptions, emotions, and filenames.
+        Supports synonym matching (happy=joyful) and abbreviations (FIR=First Incident Report).
+        """
+        # Expand query with synonyms and abbreviations
+        expansion = query_expansion_service.expand_query(query)
+        expanded_terms = expansion["all_search_terms"]
+        query_emotions = query_expansion_service.get_emotion_mappings(query)
+        
+        logger.info(f"Query expanded: {expansion['query_words']} -> {list(expanded_terms)[:10]}...")
+        if expansion["expansion_reasoning"]:
+            logger.info(f"Expansion reasoning: {expansion['expansion_reasoning'][:3]}")
+        
         results = []
+        
+        # Also try to get descriptions from database for richer search
+        db_descriptions = self._get_descriptions_from_db()
         
         for i, meta in enumerate(self.metadata):
             score = 0.0
+            match_sources = []
             
             # Apply filters first
             if filters:
@@ -275,29 +292,84 @@ class SemanticSearchService:
                 if filters.get("emotion") and meta.get("emotion_label") != filters["emotion"]:
                     continue
             
+            # Get all searchable text
             transcript = meta.get("transcript_snippet", "").lower()
             emotion = meta.get("emotion_label", "").lower()
             fname = meta.get("file_name", "").lower()
             timing_pattern = meta.get("timing_data", {}).get("pattern", "").lower()
             laughter = "laughter" if meta.get("audio_features", {}).get("laughter_detected") else ""
             
-            # Accurate scoring: prioritize dialogue matches
-            matches = 0
-            for term in query_terms:
-                if term in transcript: matches += 5
-                if term in emotion: matches += 3
-                if term in fname: matches += 2
-                if term in timing_pattern: matches += 4 # High weight for behavioral patterns
-                if term in laughter: matches += 6 # Very high weight for laughter
+            # Get descriptions from DB if available
+            take_id = meta.get("take_id")
+            video_desc = db_descriptions.get(take_id, {}).get("video_desc", "").lower()
+            audio_desc = db_descriptions.get(take_id, {}).get("audio_desc", "").lower()
             
-            if matches > 0 or not query_terms:
-                # Basic similarity score [0, 1]
-                score = min(0.95, 0.5 + (matches * 0.1))
+            # Combine all searchable content
+            combined_text = f"{transcript} {video_desc} {audio_desc} {fname}"
+            
+            # Scoring with expanded terms
+            matches = 0
+            for term in expanded_terms:
+                # Dialogue/Transcript matches (highest priority)
+                if term in transcript:
+                    matches += 6
+                    if "transcript" not in match_sources:
+                        match_sources.append("transcript")
                 
-                # Mock reasoning for keyword match
+                # Video/Audio description matches
+                if term in video_desc:
+                    matches += 4
+                    if "video_description" not in match_sources:
+                        match_sources.append("video_description")
+                
+                if term in audio_desc:
+                    matches += 4
+                    if "audio_description" not in match_sources:
+                        match_sources.append("audio_description")
+                
+                # Emotion label matches
+                if term in emotion or term == emotion:
+                    matches += 5
+                    if "emotion" not in match_sources:
+                        match_sources.append("emotion")
+                
+                # Filename matches
+                if term in fname:
+                    matches += 3
+                    if "filename" not in match_sources:
+                        match_sources.append("filename")
+                
+                # Behavioral pattern matches
+                if term in timing_pattern:
+                    matches += 5
+                    if "behavioral_pattern" not in match_sources:
+                        match_sources.append("behavioral_pattern")
+                
+                # Laughter detection
+                if term in laughter:
+                    matches += 7
+                    if "laughter_detected" not in match_sources:
+                        match_sources.append("laughter_detected")
+            
+            # Bonus for emotion category matches from query
+            if query_emotions and emotion in query_emotions:
+                matches += 8
+                if "emotion_category" not in match_sources:
+                    match_sources.append("emotion_category")
+            
+            if matches > 0 or not expanded_terms:
+                # Improved scoring formula
+                score = min(0.98, 0.4 + (matches * 0.05))
+                
+                # Generate reasoning with match sources
                 parsed_intent = intent_embedding_service.parse_query_intent(query)
                 reasoning = self._generate_reasoning(query, parsed_intent, meta, score)
-                reasoning["matched_because"].insert(0, f"Keyword match found in {('transcript' if any(t in transcript for t in query_terms) else 'metadata')}")
+                
+                # Add expansion info to reasoning
+                match_info = f"Matched in: {', '.join(match_sources)}" if match_sources else "General match"
+                reasoning["matched_because"].insert(0, match_info)
+                if expansion["expansion_reasoning"]:
+                    reasoning["query_expansion"] = expansion["expansion_reasoning"][:2]
                 
                 results.append(SearchResult(
                     result_id=i,
@@ -316,6 +388,35 @@ class SemanticSearchService:
         # Sort by score and limit
         results.sort(key=lambda x: x.confidence, reverse=True)
         return results[:top_k]
+    
+    def _get_descriptions_from_db(self) -> Dict[int, Dict[str, str]]:
+        """Fetch video and audio descriptions from database for richer search."""
+        try:
+            from app.db.session import SessionLocal
+            from app.models import database as models
+            
+            db = SessionLocal()
+            takes = db.query(models.Take).all()
+            
+            descriptions = {}
+            for take in takes:
+                meta = take.ai_metadata or {}
+                cv_data = meta.get("cv", {})
+                audio_data = meta.get("audio", {})
+                
+                descriptions[take.id] = {
+                    "video_desc": cv_data.get("video_description", ""),
+                    "audio_desc": audio_data.get("audio_description", ""),
+                    "transcript": audio_data.get("transcript", ""),
+                    "emotion": meta.get("emotion", "neutral"),
+                    "detected_emotions": meta.get("detected_emotions", [])
+                }
+            
+            db.close()
+            return descriptions
+        except Exception as e:
+            logger.warning(f"Could not fetch descriptions from DB: {e}")
+            return {}
     
     def search_by_intent(
         self,

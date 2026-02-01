@@ -75,6 +75,8 @@ export const api = {
     search: {
         intent: (data: { query: string; top_k?: number; filters?: any }) =>
             apiClient.post('/search/intent', data),
+        unified: (data: { query: string; top_k?: number; filters?: any }) =>
+            apiClient.post('/search/unified', data),
         suggestions: (q: string) => apiClient.get(`/search/suggestions?q=${q}`),
         explain: (id: number) => apiClient.get(`/search/explain/${id}`),
         feedback: (data: { query: string; result_id: number; is_relevant: boolean }) =>

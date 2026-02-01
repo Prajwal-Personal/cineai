@@ -62,26 +62,69 @@ export const EmotionPerformance: React.FC = () => {
             'Analytical & Technical': []
         };
 
+        // Emotion mapping from detected_emotions to category names
+        const emotionToCategory: { [key: string]: string } = {
+            'joy': 'Joy & Happiness',
+            'happy': 'Joy & Happiness',
+            'sadness': 'Sadness & Melancholy',
+            'sad': 'Sadness & Melancholy',
+            'anger': 'Anger & Frustration',
+            'angry': 'Anger & Frustration',
+            'tense': 'Anger & Frustration',
+            'fear': 'Fear & Anxiety',
+            'disgust': 'Disgust & Contempt',
+            'surprise': 'Surprise & Shock',
+            'surprised': 'Surprise & Shock',
+            'analytical': 'Analytical & Technical',
+            'thoughtful': 'Analytical & Technical',
+            'neutral': 'Neutral & Balanced'
+        };
+
         takes.forEach(take => {
             const meta = take.ai_metadata || {};
-            const emotion = (meta.emotion || 'neutral').toLowerCase();
+            const detectedEmotions = meta.detected_emotions || [];
+            const primaryEmotion = (meta.emotion || 'neutral').toLowerCase();
 
-            if (emotion === 'joy' || emotion === 'happy') {
-                categories['Joy & Happiness'].push(take);
-            } else if (emotion === 'sad' || emotion === 'sadness') {
-                categories['Sadness & Melancholy'].push(take);
-            } else if (emotion === 'anger' || emotion === 'angry' || emotion === 'tense') {
-                categories['Anger & Frustration'].push(take);
-            } else if (emotion === 'fear') {
-                categories['Fear & Anxiety'].push(take);
-            } else if (emotion === 'disgust') {
-                categories['Disgust & Contempt'].push(take);
-            } else if (emotion === 'surprised' || emotion === 'surprise') {
-                categories['Surprise & Shock'].push(take);
-            } else if (emotion === 'analytical' || emotion === 'thoughtful') {
-                categories['Analytical & Technical'].push(take);
-            } else {
-                categories['Neutral & Balanced'].push(take);
+            // Track which categories this take has been added to (avoid duplicates)
+            const addedToCategories = new Set<string>();
+
+            // If we have detected_emotions array, use it for multi-category placement
+            if (detectedEmotions.length > 0) {
+                detectedEmotions.forEach((emotionData: { emotion: string; confidence: number }) => {
+                    const emotion = emotionData.emotion.toLowerCase();
+                    const confidence = emotionData.confidence;
+
+                    // Only add if confidence is high enough (>= 0.15)
+                    if (confidence >= 0.15) {
+                        const category = emotionToCategory[emotion];
+                        if (category && !addedToCategories.has(category)) {
+                            categories[category].push(take);
+                            addedToCategories.add(category);
+                        }
+                    }
+                });
+            }
+
+            // Always ensure the primary emotion category has this take
+            if (addedToCategories.size === 0) {
+                // Fallback to primary emotion
+                if (primaryEmotion === 'joy' || primaryEmotion === 'happy') {
+                    categories['Joy & Happiness'].push(take);
+                } else if (primaryEmotion === 'sad' || primaryEmotion === 'sadness') {
+                    categories['Sadness & Melancholy'].push(take);
+                } else if (primaryEmotion === 'anger' || primaryEmotion === 'angry' || primaryEmotion === 'tense') {
+                    categories['Anger & Frustration'].push(take);
+                } else if (primaryEmotion === 'fear') {
+                    categories['Fear & Anxiety'].push(take);
+                } else if (primaryEmotion === 'disgust') {
+                    categories['Disgust & Contempt'].push(take);
+                } else if (primaryEmotion === 'surprised' || primaryEmotion === 'surprise') {
+                    categories['Surprise & Shock'].push(take);
+                } else if (primaryEmotion === 'analytical' || primaryEmotion === 'thoughtful') {
+                    categories['Analytical & Technical'].push(take);
+                } else {
+                    categories['Neutral & Balanced'].push(take);
+                }
             }
         });
 
