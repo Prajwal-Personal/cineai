@@ -13,16 +13,12 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-# Assemble CORS origins from config
-cors_origins = settings.BACKEND_CORS_ORIGINS
-if isinstance(cors_origins, str):
-    cors_origins = [i.strip() for i in cors_origins.split(",") if i.strip()]
-
-# Standard CORS Middleware with explicit origins and credentials enabled
+# Wildcard CORS - The safest bet for Hackathon connectivity
+# We disable credentials (cookies) to allow usage of ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin).rstrip("/") for origin in cors_origins],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
@@ -39,12 +35,17 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 async def root():
     return {"message": "Welcome to SmartCut AI Backend API", "version": "1.0.0"}
 
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "cors": "wildcard"}
+
 @app.on_event("startup")
 def startup_event():
     """Create all database tables on startup and log config"""
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables created successfully!")
-    print(f"🚀 CORS Origins: {settings.BACKEND_CORS_ORIGINS}")
+    print("✅ Database tables created successfully!")
+    print(f"🚀 CORS Policy: Wildcard ['*'] (Credentials Disabled)")
     print(f"📡 API Path Prefix: {settings.API_V1_STR}")
     print(f"🛠️ Debug Mode: {settings.DEBUG}")
     print(f"📂 Storage Path: {settings.STORAGE_PATH}")
