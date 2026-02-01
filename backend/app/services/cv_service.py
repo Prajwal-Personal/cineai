@@ -199,7 +199,19 @@ class CVService:
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Video not found: {video_path}")
 
-        cap = cv2.VideoCapture(video_path)
+        # CRITICAL SAFEGUARD: If CV2 failed to import, we MUST NOT try to use it.
+        # Fall back gracefully to the metadata/heuristic analysis already performed above.
+        if not CV2_AVAILABLE:
+            logger.warning("OpenCV not available. Skipping frame analysis and returning heuristic data.")
+            return {
+                "duration": est_duration if 'est_duration' in locals() else 0.0,
+                "objects": heuristic_objects if 'heuristic_objects' in locals() else [],
+                "technical_score": tech_score if 'tech_score' in locals() else 0.0,
+                "blur_score": 0.0,
+                "reasoning": reason_text if 'reason_text' in locals() else "Neural analysis unavailable.",
+                "video_description": video_desc if 'video_desc' in locals() else "Visual analysis unavailable.",
+                "confidence": 0.4
+            }
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = cap.get(cv2.CAP_PROP_FPS)
         duration = frame_count / fps if fps > 0 else 0
