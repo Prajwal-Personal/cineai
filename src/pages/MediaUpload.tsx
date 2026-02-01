@@ -33,8 +33,8 @@ interface UploadingFile {
 import { api } from '../lib/api';
 
 export const MediaUpload = () => {
-    const [files, setFiles] = useState<UploadingFile[]>([]);
-    const uploadMedia = useProjectStore(state => state.uploadMedia);
+    const activeUploads = useProjectStore(state => state.activeUploads);
+    const { uploadMedia, addUpload, updateUploadProgress, removeUpload } = useProjectStore();
 
     const getFileType = useCallback((name: string): UploadingFile['type'] => {
         const ext = name.split('.').pop()?.toLowerCase();
@@ -44,33 +44,12 @@ export const MediaUpload = () => {
         return 'other';
     }, []);
 
-    // Fetch existing media on mount
+    // Fetching handled globally now, or we can trigger a refresh on mount if needed.
+    // Ideally we assume Dashboard or App root keeps `takes` fresh, but we can trigger a fetch.
+    const fetchTakes = useProjectStore(state => state.fetchTakes);
     React.useEffect(() => {
-        const fetchMedia = async () => {
-            try {
-                const response = await api.media.listTakes();
-                const takes = response.data;
-                if (!Array.isArray(takes)) {
-                    console.error("Expected array of takes, got:", takes);
-                    return;
-                }
-                const mappedFiles: UploadingFile[] = takes.map((take: any) => ({
-                    id: take.id.toString(),
-                    name: take.file_name,
-                    size: take.file_size || 0,
-                    progress: 100,
-                    status: 'completed',
-                    type: getFileType(take.file_name)
-                }));
-                // Sort by ID descending (newest first)
-                mappedFiles.sort((a, b) => parseInt(b.id) - parseInt(a.id));
-                setFiles(mappedFiles);
-            } catch (err) {
-                console.error("Failed to fetch media list", err);
-            }
-        };
-        fetchMedia();
-    }, [getFileType]);
+        fetchTakes();
+    }, [fetchTakes]);
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         const newFiles = acceptedFiles.map(file => ({
@@ -83,23 +62,22 @@ export const MediaUpload = () => {
             rawFile: file
         }));
 
-        setFiles((prev: UploadingFile[]) => [...newFiles, ...prev]);
+        // Add to global store immediately
+        newFiles.forEach(f => addUpload(f));
 
         for (const fileObj of newFiles) {
             try {
-                // In a real app with axios.post(url, data, { onUploadProgress }), 
-                // we'd update the progress here. 
-                // Since our store wrapper is a simple async, we'll call it and mark complete.
                 await uploadMedia(fileObj.rawFile as File);
-                setFiles((prev: UploadingFile[]) => prev.map((f: UploadingFile) => f.id === fileObj.id ? { ...f, progress: 100, status: 'completed' } : f));
+                updateUploadProgress(fileObj.id, 100, 'completed');
             } catch (err: any) {
                 console.error("Upload error details:", err);
                 const msg = err.response?.data?.detail || err.message || "Network Error";
-                alert(`Upload Failed: ${msg}\n\nCheck console for details.`);
-                setFiles((prev: UploadingFile[]) => prev.map((f: UploadingFile) => f.id === fileObj.id ? { ...f, status: 'error' } : f));
+                // Don't use alert, just update status
+                console.error(`Upload Failed: ${msg}`);
+                updateUploadProgress(fileObj.id, 0, 'error');
             }
         }
-    }, [getFileType, uploadMedia]);
+    }, [getFileType, uploadMedia, addUpload, updateUploadProgress]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
@@ -136,23 +114,23 @@ export const MediaUpload = () => {
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold flex items-center gap-2">
                         <Database size={20} className="text-primary" />
-                        Active Uploads ({files.length})
+                        Active Uploads ({activeUploads.length})
                     </h3>
-                    {files.length > 0 && (
-                        <button className="text-xs text-editor-muted hover:text-white transition-colors" onClick={() => setFiles([])}>
+                    {activeUploads.length > 0 && (
+                        <button className="text-xs text-editor-muted hover:text-white transition-colors" onClick={() => activeUploads.forEach(f => removeUpload(f.id))}>
                             Clear All
                         </button>
                     )}
                 </div>
 
-                {files.length === 0 ? (
+                {activeUploads.length === 0 ? (
                     <div className="glass-panel p-12 rounded-xl text-center text-editor-muted italic">
                         No active uploads. All files will appear here during processing.
                     </div>
                 ) : (
                     <div className="grid gap-3">
-                        {files.map((file: UploadingFile) => (
-                            <UploadItem key={file.id} file={file} onRemove={(id: string) => setFiles((prev: UploadingFile[]) => prev.filter((f: UploadingFile) => f.id !== id))} />
+                        {activeUploads.map((file: any) => (
+                            <UploadItem key={file.id} file={file} onRemove={(id: string) => removeUpload(id)} />
                         ))}
                     </div>
                 )}

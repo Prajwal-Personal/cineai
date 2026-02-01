@@ -20,14 +20,22 @@ interface ProjectState {
     };
     logs: string[];
 
+    // Media State
+    takes: any[];
+    activeUploads: any[];
+
     // Actions
     timeline: unknown | null;
     fetchProject: () => Promise<void>;
     fetchTimeline: () => Promise<void>;
+    fetchTakes: () => Promise<void>;
     getProcessingStatus: (takeId: number) => Promise<unknown>;
     setProcessingProgress: (progress: number) => void;
     addLog: (log: string) => void;
     uploadMedia: (file: File) => Promise<unknown>;
+    addUpload: (file: any) => void;
+    updateUploadProgress: (id: string, progress: number, status: 'uploading' | 'completed' | 'error') => void;
+    removeUpload: (id: string) => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -54,6 +62,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         "Command Center Handshake: OK"
     ],
     timeline: null,
+    takes: [],
+    activeUploads: [],
 
     fetchProject: async () => {
         set({ loading: true, error: null });
@@ -82,6 +92,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         }
     },
 
+    fetchTakes: async () => {
+        try {
+            const response = await api.media.listTakes();
+            if (response.data && Array.isArray(response.data)) {
+                set({ takes: response.data });
+            }
+        } catch (err) {
+            console.error("Failed to fetch takes", err);
+        }
+    },
+
     getProcessingStatus: async (takeId: number) => {
         try {
             const response = await api.processing.getStatus(takeId);
@@ -100,10 +121,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         try {
             const response = await api.media.upload(file);
             set({ loading: false });
+            // Refresh list immediately after upload
+            await get().fetchTakes();
             return response.data;
         } catch (err: unknown) {
             set({ error: err instanceof Error ? err.message : 'Unknown error', loading: false });
             throw err;
         }
-    }
+    },
+
+    addUpload: (file) => set((state) => ({ activeUploads: [file, ...state.activeUploads] })),
+
+    updateUploadProgress: (id, progress, status) => set((state) => ({
+        activeUploads: state.activeUploads.map(f => f.id === id ? { ...f, progress, status } : f)
+    })),
+
+    removeUpload: (id) => set((state) => ({
+        activeUploads: state.activeUploads.filter(f => f.id !== id)
+    }))
 }));

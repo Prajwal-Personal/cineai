@@ -61,7 +61,7 @@ interface PacingData {
 export const Dashboard = () => {
     const project = useProjectStore();
     const navigate = useNavigate();
-    const [takes, setTakes] = useState<Take[]>([]);
+    const { takes, fetchTakes } = useProjectStore();
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [cues, setCues] = useState<VocalCue[]>([]);
@@ -79,17 +79,18 @@ export const Dashboard = () => {
 
     useEffect(() => {
         project.fetchProject();
+        fetchTakes(); // Initial fetch
+
         const fetchData = async () => {
             try {
-                const [takesRes, insightsRes] = await Promise.all([
-                    api.media.listTakes(),
+                const [insightsRes] = await Promise.all([
+                    // api.media.listTakes(), // Handled by store now
                     api.intelligence.getProjectInsights()
                 ]);
 
-                // Defensive guards: Ensure we always have arrays before setting state
-                if (takesRes.data && Array.isArray(takesRes.data)) {
-                    setTakes(takesRes.data);
-                }
+                // Update store takes occasionally or rely on upload trigger?
+                // For robustness, we can call fetchTakes() here too.
+                await fetchTakes();
 
                 if (insightsRes.data) {
                     const data = insightsRes.data;
@@ -111,7 +112,7 @@ export const Dashboard = () => {
         };
         fetchData();
 
-        // Polling for live updates
+        // Polling for live updates (including takes)
         const interval = setInterval(fetchData, 5000);
         return () => clearInterval(interval);
     }, []);
