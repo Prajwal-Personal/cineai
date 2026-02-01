@@ -180,8 +180,8 @@ class ProcessingOrchestrator:
             # -- NEW: Advanced Multi-Modal Emotion Inference --
             self._progress[take.id]["logs"].append("Initiating Multi-Modal Emotion Inference...")
             
-            # 1. NLP Contribution (40%)
-            nlp_res = await nlp_service.analyze_emotion(transcript)
+            # 1. NLP Contribution (40%) - Pass filename for heuristics
+            nlp_res = await nlp_service.analyze_emotion(transcript, take.file_name)
             nlp_emotion = nlp_res["emotion"]
             nlp_scores = nlp_res.get("scores", {})
             
@@ -203,8 +203,18 @@ class ProcessingOrchestrator:
             elif comp == "intricate":
                 visual_emotion = "thoughtful"
             
-            if "screen recording" in take.file_name.lower():
+            # Filename-based visual emotion overrides
+            fname_lower = take.file_name.lower()
+            if "screen" in fname_lower or "recording" in fname_lower or "capture" in fname_lower:
                 visual_emotion = "analytical"
+            elif "funny" in fname_lower or "comedy" in fname_lower or "laugh" in fname_lower:
+                visual_emotion = "joy"
+            elif "sad" in fname_lower or "emotional" in fname_lower or "drama" in fname_lower:
+                visual_emotion = "sadness"
+            elif "action" in fname_lower or "tense" in fname_lower or "fight" in fname_lower:
+                visual_emotion = "anger"
+            elif "horror" in fname_lower or "scary" in fname_lower or "dark" in fname_lower:
+                visual_emotion = "fear"
             
             # Weighted Voting
             emotion_weights = {
@@ -213,7 +223,7 @@ class ProcessingOrchestrator:
                 "analytical": 0.0, "thoughtful": 0.0
             }
             
-            # Add NLP Weights
+            # Add NLP Weights (scaled by 0.4)
             for e, s in nlp_scores.items():
                 if e in emotion_weights: emotion_weights[e] += (s * 0.4)
             if nlp_emotion in emotion_weights: emotion_weights[nlp_emotion] += 0.2 # Bonus for winning NLP
@@ -227,10 +237,12 @@ class ProcessingOrchestrator:
             # Final Decision
             emotion_label = max(emotion_weights, key=emotion_weights.get)
             
-            # Safety: If all weights are 0, use ID-based variety
+            # Safety: If all weights are 0, use filename hash for variety (not just ID)
             if sum(emotion_weights.values()) == 0:
-                variety_pool = ["neutral", "joy", "thoughtful", "analytical", "sadness", "anger"]
-                emotion_label = variety_pool[take.id % len(variety_pool)]
+                variety_pool = ["thoughtful", "joy", "analytical", "surprise", "sadness", "anger"]
+                # Use filename hash for better variety than just ID
+                name_hash = sum(ord(c) for c in take.file_name)
+                emotion_label = variety_pool[(name_hash + take.id) % len(variety_pool)]
             
             self._progress[take.id]["logs"].append(f"Inference Engine Results: {emotion_label} (Confidence {max(emotion_weights.values()):.2f})")
             

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.api_v1.endpoints import projects, media, processing, timeline, export, intelligence, training, search, script
+from app.api.api_v1.endpoints import projects, media, processing, timeline, export, intelligence, training, search, script, ai_monitor
 
 api_router = APIRouter()
 api_router.include_router(projects.router, prefix="/projects", tags=["projects"])
@@ -11,3 +11,5 @@ api_router.include_router(intelligence.router, prefix="/intelligence", tags=["in
 api_router.include_router(training.router, prefix="/training", tags=["training"])
 api_router.include_router(search.router, prefix="/search", tags=["semantic-search"])
 api_router.include_router(script.router, prefix="/script", tags=["script-analysis"])
+api_router.include_router(ai_monitor.router, prefix="/ai-monitor", tags=["ai-monitor"])
+

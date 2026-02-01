@@ -72,12 +72,91 @@ interface ProcessingStatus {
     logs: string[];
 }
 
+// New types for full AI analysis
+interface FullAnalysisResult {
+    take_id: number;
+    file_name: string;
+    video_analysis: {
+        metadata: {
+            fps: number;
+            resolution: string;
+            duration: number;
+            codec: string;
+            total_frames: number;
+            file_size_mb: number;
+        };
+        model_info: {
+            name: string;
+            version: string;
+            inference_device: string;
+        };
+        detections: Record<string, {
+            count: number;
+            avg_confidence: number;
+            max_confidence: number;
+            min_confidence: number;
+        }>;
+        timeline: Array<{
+            timestamp: number;
+            frame: number;
+            objects: string[];
+            object_count: number;
+        }>;
+        scene_annotations: Array<{
+            timestamp: number;
+            annotation: string;
+            object_count: number;
+        }>;
+        performance: {
+            total_inference_time_ms: number;
+            avg_frame_inference_ms: number;
+            frames_analyzed: number;
+        };
+        video_summary?: {
+            content_type: string;
+            primary_objects: string[];
+            total_detections: number;
+            unique_classes: number;
+        };
+    };
+    audio_analysis: {
+        transcript: string;
+        language: string;
+        segments: Array<{
+            start: number;
+            end: number;
+            text: string;
+            confidence: number;
+        }>;
+        scene_breaks: number[];
+        model_info: {
+            name: string;
+            version: string;
+        };
+        duration: number;
+        word_count: number;
+        confidence: number;
+        processing_time_ms: number;
+    };
+    combined_timeline: Array<{
+        timestamp: number;
+        type: 'detection' | 'transcript';
+        content: string;
+        object_count?: number;
+        end_time?: number;
+        confidence?: number;
+    }>;
+}
+
 export const AIMonitor = () => {
     const getProcessingStatus = useProjectStore(state => state.getProcessingStatus);
     const [takes, setTakes] = useState<Take[]>([]);
     const [selectedTake, setSelectedTake] = useState<Take | null>(null);
     const [statusData, setStatusData] = useState<ProcessingStatus | null>(null);
     const [isPolling, setIsPolling] = useState(false);
+    const [fullAnalysis, setFullAnalysis] = useState<FullAnalysisResult | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [activeTab, setActiveTab] = useState<'detections' | 'transcript' | 'metadata'>('detections');
 
     // Initial Load & Refresh Logic
     const { search } = window.location;
@@ -159,6 +238,20 @@ export const AIMonitor = () => {
             // Status poll will catch the update
         } catch (e) {
             console.error("Retry failed", e);
+        }
+    };
+
+    // Run full AI analysis
+    const runFullAnalysis = async () => {
+        if (!selectedTake) return;
+        setIsAnalyzing(true);
+        try {
+            const response = await api.aiMonitor.analyzeFull(selectedTake.id);
+            setFullAnalysis(response.data);
+        } catch (e) {
+            console.error("Full analysis failed", e);
+        } finally {
+            setIsAnalyzing(false);
         }
     };
 
@@ -489,6 +582,186 @@ export const AIMonitor = () => {
                                             <p className="text-xs text-gray-300 italic leading-relaxed">
                                                 {selectedTake.ai_metadata.audio?.audio_description || "Analyzing sonic landscape..."}
                                             </p>
+                                        </div>
+
+                                        {/* Full Analysis Section */}
+                                        <div className="col-span-2 glass-panel p-5 rounded-xl border border-white/5 bg-surface/30">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase">
+                                                    <Cpu size={16} /> Full AI Analysis
+                                                </div>
+                                                <button
+                                                    onClick={runFullAnalysis}
+                                                    disabled={isAnalyzing}
+                                                    className={cn(
+                                                        "px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all",
+                                                        isAnalyzing
+                                                            ? "bg-white/10 text-editor-muted cursor-wait"
+                                                            : "bg-primary text-black hover:bg-primary/80"
+                                                    )}
+                                                >
+                                                    {isAnalyzing ? (
+                                                        <span className="flex items-center gap-2">
+                                                            <RefreshCw size={12} className="animate-spin" /> Analyzing...
+                                                        </span>
+                                                    ) : (
+                                                        "Run Full Analysis"
+                                                    )}
+                                                </button>
+                                            </div>
+
+                                            {/* Tab Navigation */}
+                                            {fullAnalysis && (
+                                                <>
+                                                    <div className="flex gap-2 mb-4 border-b border-white/10 pb-2">
+                                                        {(['detections', 'transcript', 'metadata'] as const).map((tab) => (
+                                                            <button
+                                                                key={tab}
+                                                                onClick={() => setActiveTab(tab)}
+                                                                className={cn(
+                                                                    "px-3 py-1 rounded-t text-xs font-bold uppercase tracking-wider transition-all",
+                                                                    activeTab === tab
+                                                                        ? "bg-primary/20 text-primary border-b-2 border-primary"
+                                                                        : "text-editor-muted hover:text-white"
+                                                                )}
+                                                            >
+                                                                {tab}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Detections Tab */}
+                                                    {activeTab === 'detections' && (
+                                                        <div className="space-y-3 max-h-64 overflow-y-auto">
+                                                            {/* Video Summary */}
+                                                            {fullAnalysis.video_analysis.video_summary && (
+                                                                <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-3 rounded-lg border border-primary/20 mb-3">
+                                                                    <div className="text-[10px] text-primary uppercase font-bold tracking-widest mb-2">
+                                                                        Video Summary
+                                                                    </div>
+                                                                    <div className="flex justify-between items-center mb-2">
+                                                                        <span className="text-sm font-semibold text-white">
+                                                                            {fullAnalysis.video_analysis.video_summary.content_type}
+                                                                        </span>
+                                                                        <span className="text-xs text-accent">
+                                                                            {fullAnalysis.video_analysis.video_summary.total_detections} detections
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="text-xs text-editor-muted">
+                                                                        Top: {fullAnalysis.video_analysis.video_summary.primary_objects.slice(0, 3).join(' • ')}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            <div className="text-[10px] text-editor-muted uppercase font-bold tracking-widest mb-2">
+                                                                Detected Objects ({Object.keys(fullAnalysis.video_analysis.detections).length} classes)
+                                                            </div>
+                                                            {Object.entries(fullAnalysis.video_analysis.detections).map(([className, data]) => (
+                                                                <div key={className} className="bg-black/20 p-3 rounded-lg">
+                                                                    <div className="flex justify-between items-center mb-1">
+                                                                        <span className="font-semibold text-sm text-white capitalize">{className}</span>
+                                                                        <span className="text-xs text-primary font-bold">{data.count}x</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                                            <div
+                                                                                className="h-full bg-gradient-to-r from-primary to-accent"
+                                                                                style={{ width: `${data.avg_confidence * 100}%` }}
+                                                                            />
+                                                                        </div>
+                                                                        <span className="text-[10px] text-editor-muted">
+                                                                            {Math.round(data.avg_confidence * 100)}% conf
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <div className="text-[10px] text-editor-muted pt-2 border-t border-white/5">
+                                                                Performance: {fullAnalysis.video_analysis.performance.frames_analyzed} frames in {Math.round(fullAnalysis.video_analysis.performance.total_inference_time_ms)}ms
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Transcript Tab */}
+                                                    {activeTab === 'transcript' && (
+                                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                            <div className="text-[10px] text-editor-muted uppercase font-bold tracking-widest mb-2">
+                                                                Transcript ({fullAnalysis.audio_analysis.word_count} words, {fullAnalysis.audio_analysis.language.toUpperCase()})
+                                                            </div>
+                                                            {fullAnalysis.audio_analysis.segments.map((seg, i) => (
+                                                                <div key={i} className="bg-black/20 p-2 rounded flex gap-3 hover:bg-black/30 transition-colors cursor-pointer">
+                                                                    <div className="text-[10px] text-primary font-mono whitespace-nowrap">
+                                                                        {seg.start.toFixed(1)}s
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-200 flex-1">
+                                                                        {seg.text}
+                                                                    </div>
+                                                                    <div className="text-[10px] text-editor-muted">
+                                                                        {Math.round(seg.confidence * 100)}%
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Metadata Tab */}
+                                                    {activeTab === 'metadata' && (
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div className="space-y-2">
+                                                                <div className="text-[10px] text-editor-muted uppercase font-bold tracking-widest">Video</div>
+                                                                <div className="bg-black/20 p-2 rounded text-xs space-y-1">
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-editor-muted">Resolution</span>
+                                                                        <span className="text-white font-mono">{fullAnalysis.video_analysis.metadata.resolution}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-editor-muted">FPS</span>
+                                                                        <span className="text-white font-mono">{fullAnalysis.video_analysis.metadata.fps}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-editor-muted">Duration</span>
+                                                                        <span className="text-white font-mono">{fullAnalysis.video_analysis.metadata.duration}s</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-editor-muted">Codec</span>
+                                                                        <span className="text-white font-mono">{fullAnalysis.video_analysis.metadata.codec}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-editor-muted">Size</span>
+                                                                        <span className="text-white font-mono">{fullAnalysis.video_analysis.metadata.file_size_mb} MB</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <div className="text-[10px] text-editor-muted uppercase font-bold tracking-widest">Models</div>
+                                                                <div className="bg-black/20 p-2 rounded text-xs space-y-1">
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-editor-muted">YOLO</span>
+                                                                        <span className="text-primary font-mono">{fullAnalysis.video_analysis.model_info.name} v{fullAnalysis.video_analysis.model_info.version}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-editor-muted">Device</span>
+                                                                        <span className="text-white font-mono">{fullAnalysis.video_analysis.model_info.inference_device}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-editor-muted">Whisper</span>
+                                                                        <span className="text-accent font-mono">{fullAnalysis.audio_analysis.model_info.name}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between">
+                                                                        <span className="text-editor-muted">Avg Inference</span>
+                                                                        <span className="text-white font-mono">{fullAnalysis.video_analysis.performance.avg_frame_inference_ms}ms/frame</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {!fullAnalysis && !isAnalyzing && (
+                                                <div className="text-center text-editor-muted text-sm py-4">
+                                                    Click "Run Full Analysis" for comprehensive YOLO detection and Whisper transcription
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

@@ -191,32 +191,33 @@ class AudioService:
                 language = "N/A"
             else:
                 # 100+ ITEM DEEP-VARIETY POOL (Multi-Language Professional Transcripts)
+                # UPDATED: Added more emotion-triggering keywords for better NLP detection
                 mock_pool = [
-                {"t": "The perimeter seems secure, Marcus. No signs of breach yet.", "l": "en"},
-                {"t": "क्या आप इसे ठीक कर सकते हैं? सिस्टम काम नहीं कर रहा है।", "l": "hi"},
-                {"t": "அடுத்த காட்சிக்கு செல்வோம். லைட்டிங் சரியாக இல்லை.", "l": "ta"},
-                {"t": "I didn't see that coming! That was a perfect take, everyone.", "l": "en"},
-                {"t": "Camera check karo, light kam hai foreground mein.", "l": "hi"},
-                {"t": "We need more intensity in this scene. Try it again from mark two.", "l": "en"},
-                {"t": "எல்லாரும் தயாராக இருங்கள், ஷாட் போகப்போகிறோம்.", "l": "ta"},
-                {"t": "The focus is slightly off on the secondary subject. Adjust the lens.", "l": "en"},
-                {"t": "चुप रहो! शूटिंग चल रही है।", "l": "hi"},
-                {"t": "Let's optimize this workflow for the next production cycle.", "l": "en"},
-                {"t": "இதற்கு முன்னால் பார்த்ததை விட இது நன்றாக இருக்கிறது.", "l": "ta"},
-                {"t": "Sound check. One, two. The levels are peaking slightly. Check the gain.", "l": "en"},
-                {"t": "सब कुछ ठीक है, बस थोड़ा और इमोशन चाहिए।", "l": "hi"},
-                {"t": "I forgot the line again... [Laughter] Sorry, let's restart.", "l": "en"},
-                {"t": "அமைதியாக இருங்கள், ஆக்ஷன்!", "l": "ta"},
-                {"t": "The backdrop needs to be more vibrant. Change the gel on light four.", "l": "en"},
-                {"t": "आपका शॉट बहुत अच्छा था, वंडरफुल!", "l": "hi"},
-                {"t": "Wait for the cue... Now! Move the camera slowly to the left.", "l": "en"},
-                {"t": "இந்த வீடியோ மிகவும் அழகாக இருக்கிறது.", "l": "ta"},
-                {"t": "We have a slight echo in this room. Use the baffle boards.", "l": "en"},
-                {"t": "स्क्रिप्ट में कुछ बदलाव करने होंगे।", "l": "hi"},
-                {"t": "That's a wrap for today! Great job everyone.", "l": "en"},
-                {"t": "நாளை காலை சீக்கிரம் வந்துவிடுங்கள்.", "l": "ta"},
-                {"t": "Check the battery levels on the wireless mics. We're losing signal.", "l": "en"},
-                {"t": "लाइटिंग सेटअप फिर से चेक करो।", "l": "hi"},
+                {"t": "I'm so happy with this take! This is absolutely wonderful, everyone.", "l": "en", "e": "joy"},
+                {"t": "मुझे बहुत डर लग रहा है, यह जगह बहुत डरावनी है।", "l": "hi", "e": "fear"},
+                {"t": "இது மிகவும் சோகமான காட்சி, என் கண்களில் கண்ணீர் வருகிறது.", "l": "ta", "e": "sadness"},
+                {"t": "Whoa! I didn't expect that at all! That was a shocking surprise!", "l": "en", "e": "surprise"},
+                {"t": "This makes me so angry! I hate when things go wrong like this!", "l": "en", "e": "anger"},
+                {"t": "We need more intensity in this scene. Try it again from mark two.", "l": "en", "e": "neutral"},
+                {"t": "बहुत खुश हूं आज! सब कुछ बढ़िया चल रहा है! Amazing!", "l": "hi", "e": "joy"},
+                {"t": "The focus is slightly off. Let me think about how to adjust this.", "l": "en", "e": "thoughtful"},
+                {"t": "चुप रहो! मुझे बहुत गुस्सा आ रहा है!", "l": "hi", "e": "anger"},
+                {"t": "Let's analyze the system data and monitor the technical calibration.", "l": "en", "e": "analytical"},
+                {"t": "இது மிகவும் ஆச்சரியமாக இருக்கிறது! நான் shock ஆகிவிட்டேன்!", "l": "ta", "e": "surprise"},
+                {"t": "Sound check. One, two. The levels are peaking slightly. Check the gain.", "l": "en", "e": "analytical"},
+                {"t": "यह बहुत दुखद है, मैं रो पड़ा। So sad and heartbreaking.", "l": "hi", "e": "sadness"},
+                {"t": "I forgot the line again... [Laughter] Haha! Sorry, let's restart.", "l": "en", "e": "joy"},
+                {"t": "அமைதியாக இருங்கள், நான் பயப்படுகிறேன் இந்த இடத்தில்.", "l": "ta", "e": "fear"},
+                {"t": "The backdrop needs to be more vibrant. Change the gel on light four.", "l": "en", "e": "neutral"},
+                {"t": "आपका शॉट बहुत अच्छा था, वंडरफुल! I love it!", "l": "hi", "e": "joy"},
+                {"t": "Wait, something feels off... I'm worried about this.", "l": "en", "e": "fear"},
+                {"t": "இந்த வீடியோ மிகவும் அழகாக இருக்கிறது. Super excellent!", "l": "ta", "e": "joy"},
+                {"t": "Hmm, let me contemplate this. I'm thinking about the best approach.", "l": "en", "e": "thoughtful"},
+                {"t": "स्क्रिप्ट में कुछ बदलाव करने होंगे।", "l": "hi", "e": "neutral"},
+                {"t": "That's a wrap for today! Great job everyone. Amazing work!", "l": "en", "e": "joy"},
+                {"t": "நாளை காலை சீக்கிரம் வந்துவிடுங்கள்.", "l": "ta", "e": "neutral"},
+                {"t": "This is terrible! I hate this result! So frustrating and annoying!", "l": "en", "e": "anger"},
+                {"t": "लाइटिंग सेटअप फिर से चेक करो।", "l": "hi", "e": "analytical"},
                 {"t": "Dialogue delivery should be more natural. Don't rush the words.", "l": "en"},
                 {"t": "உங்களுக்கு என்ன வேண்டும்? சொல்லுங்கள்.", "l": "ta"},
                 {"t": "The color grading will handle the highlights in post-production.", "l": "en"},
@@ -383,6 +384,106 @@ class AudioService:
             "confidence": confidence,
             "source": source
         }
+
+    async def analyze_audio_full(self, audio_path: str) -> Dict[str, Any]:
+        """
+        Full audio analysis with segment-level timestamps for AI Monitor.
+        Returns detailed transcript with timing information.
+        """
+        import os
+        import time
+        start_time = time.time()
+        
+        result = {
+            "transcript": "",
+            "language": "unknown",
+            "segments": [],
+            "scene_breaks": [],
+            "model_info": {
+                "name": "whisper-base",
+                "version": "20231117"
+            },
+            "duration": 0.0,
+            "word_count": 0,
+            "confidence": 0.0
+        }
+        
+        if not os.path.exists(audio_path):
+            return result
+        
+        # Get duration with librosa
+        try:
+            import librosa
+            y, sr = librosa.load(audio_path, sr=None)
+            result["duration"] = round(librosa.get_duration(y=y, sr=sr), 2)
+        except:
+            pass
+        
+        model = self.get_model()
+        if model:
+            try:
+                logger.info(f"Full audio analysis for: {audio_path}")
+                whisper_result = model.transcribe(
+                    audio_path,
+                    temperature=0.0,
+                    beam_size=5,  # Higher beam size for more accurate search
+                    best_of=3,    # Sample multiple times and pick best
+                    fp16=False,
+                    language=None,  # Auto-detect language
+                    word_timestamps=True,  # Enable word-level timestamps
+                    condition_on_previous_text=True,  # Better context continuity
+                    initial_prompt="This is a clear audio recording. Transcribe accurately with proper punctuation.",
+                    no_speech_threshold=0.5,  # More aggressive speech detection
+                    compression_ratio_threshold=2.4,
+                    logprob_threshold=-1.0
+                )
+                
+                result["transcript"] = whisper_result.get("text", "").strip()
+                result["language"] = whisper_result.get("language", "en")
+                result["word_count"] = len(result["transcript"].split())
+                
+                # Extract segments with timestamps
+                segments = whisper_result.get("segments", [])
+                for seg in segments:
+                    result["segments"].append({
+                        "start": round(seg.get("start", 0), 2),
+                        "end": round(seg.get("end", 0), 2),
+                        "text": seg.get("text", "").strip(),
+                        "confidence": round(1.0 - seg.get("no_speech_prob", 0), 3)
+                    })
+                
+                # Detect scene breaks (gaps > 2 seconds between segments)
+                for i in range(1, len(segments)):
+                    prev_end = segments[i-1].get("end", 0)
+                    curr_start = segments[i].get("start", 0)
+                    if curr_start - prev_end > 2.0:
+                        result["scene_breaks"].append(round(prev_end, 2))
+                
+                # Calculate average confidence
+                if result["segments"]:
+                    avg_conf = sum(s["confidence"] for s in result["segments"]) / len(result["segments"])
+                    result["confidence"] = round(avg_conf, 3)
+                else:
+                    result["confidence"] = 0.5
+                    
+            except Exception as e:
+                logger.error(f"Full audio analysis failed: {e}")
+                result["transcript"] = f"[Analysis failed: {str(e)[:50]}]"
+        else:
+            # Fallback when whisper is not available
+            result["transcript"] = "[Whisper model not available - using placeholder]"
+            result["language"] = "en"
+            result["segments"] = [
+                {"start": 0.0, "end": 5.0, "text": "Sample segment one", "confidence": 0.7},
+                {"start": 5.5, "end": 10.0, "text": "Sample segment two", "confidence": 0.75}
+            ]
+            result["confidence"] = 0.6
+        
+        # Add processing time
+        result["processing_time_ms"] = round((time.time() - start_time) * 1000, 2)
+        
+        return result
+
 
 audio_service = AudioService()
 

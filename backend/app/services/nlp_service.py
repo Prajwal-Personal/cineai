@@ -66,34 +66,67 @@ class NLPService:
         if len(ad_libs) > 0:
             reasoning += f" Detected potential ad-libs: {', '.join(ad_libs[:3])}..."
 
-    async def analyze_emotion(self, transcript: str) -> Dict[str, Any]:
+    async def analyze_emotion(self, transcript: str, filename: str = "") -> Dict[str, Any]:
         """
         Analyzes the emotional tone of a transcript using semantic keywords.
+        Includes filename-based heuristics for improved detection.
         """
-        if not transcript:
-            return {"emotion": "neutral", "intensity": 0.0}
-
-        text = transcript.lower()
+        text = (transcript or "").lower()
+        fname = (filename or "").lower()
         
-        # Emotion Keyword Map (Valence/Arousal markers)
+        # Expanded Emotion Keyword Map with weights
         emotion_map = {
-            "joy": ["happy", "wonderful", "great", "excellent", "love", "excited", "wow", "amazing", "good", "perfect", "laugh", "khush", "mazaa", "sundar", "badhiya", "magizhchi", "super", "kadupatti", "badiya", "shandaar", "sandhosham", "nalla"],
-            "sadness": ["sad", "terrible", "bad", "unhappy", "cry", "regret", "lost", "broken", "sorrow", "miss", "alone", "dukh", "dard", "rona", "bekaar", "sogam", "varuththam", "kashtam", "mayakkam", "udaas"],
-            "anger": ["angry", "mad", "hate", "furious", "stop", "never", "annoyed", "frustrated", "yell", "aggressive", "gussa", "naraaz", "kobam", "athigaram", "veruppu", "bhadak"],
-            "fear": ["scared", "afraid", "danger", "help", "threat", "risk", "panic", "worry", "fear", "dark", "compromised", "darr", "ghabrahat", "payam", "achcham", "bhayam"],
-            "disgust": ["gross", "disgusting", "ew", "hate", "sick", "revolt", "nasty", "vile", "appalling", "ghinauna", "veruppu", "si", "che", "bekar"],
-            "surprise": ["whoa", "surprise", "sudden", "unexpected", "what", "shook", "bright", "flash", "instant", "achanak", "hairaan", "shock", "athirchi", "vinnakam", "aacharyam", "kya", "enna"],
-            "analytical": ["monitor", "system", "data", "analysis", "technical", "calibrate", "status", "report", "coordinate", "jaanch", "parikshan", "ganana", "aayu", "check", "verify"],
-            "thoughtful": ["pensive", "contemplating", "considering", "listening", "hmm", "well", "think", "thought", "sochna", "vichar", "yosidhai", "ennam", "idea", "shayad"]
+            "joy": {
+                "keywords": ["happy", "wonderful", "great", "excellent", "love", "excited", "wow", "amazing", "good", "perfect", "laugh", "funny", "comedy", "smile", "celebrate", "party", "cheer", "khush", "mazaa", "sundar", "badhiya", "magizhchi", "super", "kadupatti", "badiya", "shandaar", "sandhosham", "nalla", "haha", "lol", "brilliant", "fantastic", "awesome"],
+                "filename_hints": ["happy", "joy", "funny", "comedy", "laugh", "celebration", "party", "fun"]
+            },
+            "sadness": {
+                "keywords": ["sad", "terrible", "bad", "unhappy", "cry", "regret", "lost", "broken", "sorrow", "miss", "alone", "tear", "grief", "mourn", "depressed", "melancholy", "dukh", "dard", "rona", "bekaar", "sogam", "varuththam", "kashtam", "mayakkam", "udaas", "painful", "hurt"],
+                "filename_hints": ["sad", "cry", "emotional", "tragic", "drama", "tears", "grief"]
+            },
+            "anger": {
+                "keywords": ["angry", "mad", "hate", "furious", "stop", "never", "annoyed", "frustrated", "yell", "aggressive", "rage", "fight", "conflict", "argue", "shout", "gussa", "naraaz", "kobam", "athigaram", "veruppu", "bhadak", "damn", "hell"],
+                "filename_hints": ["angry", "rage", "fight", "conflict", "tense", "intense", "action"]
+            },
+            "fear": {
+                "keywords": ["scared", "afraid", "danger", "help", "threat", "risk", "panic", "worry", "fear", "dark", "compromised", "horror", "terror", "creepy", "haunted", "darr", "ghabrahat", "payam", "achcham", "bhayam", "nervous", "anxious"],
+                "filename_hints": ["scary", "horror", "fear", "dark", "thriller", "suspense", "nervous"]
+            },
+            "disgust": {
+                "keywords": ["gross", "disgusting", "ew", "hate", "sick", "revolt", "nasty", "vile", "appalling", "ghinauna", "veruppu", "si", "che", "bekar", "yuck", "awful"],
+                "filename_hints": ["disgust", "gross", "weird", "strange"]
+            },
+            "surprise": {
+                "keywords": ["whoa", "surprise", "sudden", "unexpected", "what", "shook", "bright", "flash", "instant", "achanak", "hairaan", "shock", "athirchi", "vinnakam", "aacharyam", "kya", "enna", "oh", "omg", "wow", "really", "unbelievable"],
+                "filename_hints": ["surprise", "shock", "reveal", "twist", "unexpected"]
+            },
+            "analytical": {
+                "keywords": ["monitor", "system", "data", "analysis", "technical", "calibrate", "status", "report", "coordinate", "jaanch", "parikshan", "ganana", "aayu", "check", "verify", "screen", "code", "debug", "test", "demo"],
+                "filename_hints": ["screen", "recording", "tutorial", "demo", "tech", "code", "debug", "test"]
+            },
+            "thoughtful": {
+                "keywords": ["pensive", "contemplating", "considering", "listening", "hmm", "well", "think", "thought", "sochna", "vichar", "yosidhai", "ennam", "idea", "shayad", "maybe", "perhaps", "wonder", "curious"],
+                "filename_hints": ["interview", "talk", "discuss", "conversation", "think", "review"]
+            }
         }
 
-        scores = {emotion: 0 for emotion in emotion_map.keys()}
+        scores = {emotion: 0.0 for emotion in emotion_map.keys()}
         
-        # Simple weighted count
-        for emotion, keywords in emotion_map.items():
-            for kw in keywords:
+        # 1. Keyword-based scoring from transcript
+        for emotion, data in emotion_map.items():
+            for kw in data["keywords"]:
                 if kw in text:
-                    scores[emotion] += 1
+                    scores[emotion] += 1.0
+        
+        # 2. Filename-based scoring (IMPORTANT for fallback scenarios)
+        for emotion, data in emotion_map.items():
+            for hint in data.get("filename_hints", []):
+                if hint in fname:
+                    scores[emotion] += 2.0  # Filename hints are weighted higher
+                    
+        # 3. Special case: screen recordings are analytical
+        if "screen" in fname or "recording" in fname or "capture" in fname:
+            scores["analytical"] += 3.0
         
         # Find dominant emotion
         dominant_emotion = max(scores, key=scores.get)
@@ -102,7 +135,7 @@ class NLPService:
         if max_score == 0:
             return {"emotion": "neutral", "intensity": 0.0, "scores": scores}
             
-        intensity = min(1.0, max_score / 3.0) # Normalize
+        intensity = min(1.0, max_score / 5.0)  # Adjusted normalization
         
         return {
             "emotion": dominant_emotion,

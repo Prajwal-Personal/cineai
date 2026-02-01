@@ -79,6 +79,11 @@ export const api = {
         explain: (id: number) => apiClient.get(`/search/explain/${id}`),
         feedback: (data: { query: string; result_id: number; is_relevant: boolean }) =>
             apiClient.post('/search/feedback', data),
+    },
+    aiMonitor: {
+        analyzeFull: (takeId: number) => apiClient.post(`/ai-monitor/analyze-full/${takeId}`),
+        getMetadata: (takeId: number) => apiClient.get(`/ai-monitor/metadata/${takeId}`),
+        getStatus: (takeId: number) => apiClient.get(`/ai-monitor/status/${takeId}`),
     }
 };
 
