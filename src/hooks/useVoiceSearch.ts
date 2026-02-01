@@ -6,16 +6,19 @@ interface UseVoiceSearchProps {
 
 export const useVoiceSearch = ({ onResult }: UseVoiceSearchProps) => {
     const [isListening, setIsListening] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const recognitionRef = useRef<any>(null);
 
     const startListening = useCallback(() => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
         if (!SpeechRecognition) {
+            setError('Speech recognition not supported');
             console.error('Speech recognition not supported in this browser.');
             return;
         }
 
+        setError(null);
         if (recognitionRef.current) {
             recognitionRef.current.stop();
         }
@@ -27,6 +30,7 @@ export const useVoiceSearch = ({ onResult }: UseVoiceSearchProps) => {
 
         recognition.onstart = () => {
             setIsListening(true);
+            setError(null);
             console.log("Speech Recognition Started");
         };
 
@@ -51,11 +55,18 @@ export const useVoiceSearch = ({ onResult }: UseVoiceSearchProps) => {
 
         recognition.onerror = (event: any) => {
             console.error('Speech recognition error:', event.error);
+            setError(event.error === 'network' ? 'Network error: Cannot reach speech servers.' : event.error);
             setIsListening(false);
         };
 
-        recognition.start();
-        recognitionRef.current = recognition;
+        try {
+            recognition.start();
+            recognitionRef.current = recognition;
+        } catch (e) {
+            console.error("Failed to start recognition", e);
+            setError("Failed to start microphone.");
+            setIsListening(false);
+        }
     }, [onResult]);
 
     const stopListening = useCallback(() => {
@@ -75,6 +86,7 @@ export const useVoiceSearch = ({ onResult }: UseVoiceSearchProps) => {
 
     return {
         isListening,
+        error,
         startListening,
         stopListening,
         toggleListening

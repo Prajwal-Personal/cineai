@@ -11,6 +11,7 @@ import {
     ChevronRight,
     Sparkles,
     CheckCircle2,
+    AlertTriangle,
     X,
     Filter
 } from 'lucide-react';
@@ -32,38 +33,41 @@ export const NeuralVoiceSearch = () => {
     const [results, setResults] = useState<any[]>([]);
     const [status, setStatus] = useState<'idle' | 'listening' | 'analyzing' | 'done'>('idle');
     const [intent, setIntent] = useState<IntentData | null>(null);
+    const [showManualInput, setShowManualInput] = useState(false);
 
     const onSpeechResult = useCallback((text: string) => {
         setQuery(text);
     }, []);
 
-    const { isListening, startListening, stopListening } = useVoiceSearch({
+    const { isListening, error, startListening, stopListening } = useVoiceSearch({
         onResult: onSpeechResult
     });
 
-    // Handle search trigger on stop or finality
-    useEffect(() => {
-        if (!isListening && query.length > 5 && status === 'listening') {
-            handleNeuralSearch(query);
-        }
-    }, [isListening, query, status]);
-
+    // Handle state transitions
     useEffect(() => {
         if (isListening) {
             setStatus('listening');
             setResults([]);
             setIntent(null);
+            setShowManualInput(false);
+        } else if (status === 'listening') {
+            // Stopped listening
+            if (query.length > 5 && !error) {
+                handleNeuralSearch(query);
+            } else {
+                setStatus('idle');
+            }
         }
-        else if (status === 'listening' && !isSearching) setStatus('idle');
-    }, [isListening, isSearching]);
+    }, [isListening, query, status, error]);
 
     const handleNeuralSearch = async (searchText: string) => {
+        if (!searchText.trim()) return;
         setStatus('analyzing');
         setIsSearching(true);
         try {
             const response = await api.search.intent({ query: searchText, top_k: 12 });
 
-            // Extract intent from the first result's reasoning for UI visualization
+            // Extract intent...
             if (response.data.results.length > 0) {
                 const firstResult = response.data.results[0];
                 setIntent({
@@ -88,6 +92,7 @@ export const NeuralVoiceSearch = () => {
         setQuery('');
         setIntent(null);
         setStatus('idle');
+        setShowManualInput(false);
     };
 
     return (
@@ -104,7 +109,7 @@ export const NeuralVoiceSearch = () => {
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 1.1 }}
-                            className="flex flex-col items-center gap-12 text-center"
+                            className="flex flex-col items-center gap-8 text-center"
                         >
                             <div className="space-y-4">
                                 <h1 className="text-6xl font-black text-white italic uppercase tracking-tighter leading-none">
@@ -115,56 +120,124 @@ export const NeuralVoiceSearch = () => {
                                 </p>
                             </div>
 
-                            <div className="relative group">
-                                <div className={cn(
-                                    "absolute -inset-8 bg-primary/20 rounded-full blur-3xl transition-all duration-700",
-                                    status === 'listening' ? "scale-150 opacity-60" : "scale-100 opacity-20 group-hover:opacity-40"
-                                )} />
+                            {/* Voice Interface */}
+                            {!showManualInput ? (
+                                <div className="flex flex-col items-center gap-8">
+                                    <div className="relative group">
+                                        <div className={cn(
+                                            "absolute -inset-8 bg-primary/20 rounded-full blur-3xl transition-all duration-700",
+                                            status === 'listening' ? "scale-150 opacity-60" : "scale-100 opacity-20 group-hover:opacity-40"
+                                        )} />
 
-                                <button
-                                    onClick={status === 'listening' ? stopListening : startListening}
-                                    className={cn(
-                                        "relative w-32 h-32 rounded-full flex items-center justify-center transition-all duration-500",
-                                        status === 'listening' ? "bg-primary shadow-[0_0_80px_rgba(59,130,246,0.6)]" : "bg-white/5 border border-white/10 hover:bg-white/10"
-                                    )}
-                                >
-                                    <AnimatePresence mode="wait">
-                                        {status === 'listening' ? (
-                                            <motion.div
-                                                key="listening-icon"
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                className="flex items-center gap-1"
-                                            >
-                                                {[1, 2, 3, 2, 1].map((h, i) => (
+                                        <button
+                                            onClick={status === 'listening' ? stopListening : startListening}
+                                            className={cn(
+                                                "relative w-32 h-32 rounded-full flex items-center justify-center transition-all duration-500",
+                                                status === 'listening' ? "bg-primary shadow-[0_0_80px_rgba(59,130,246,0.6)]" : "bg-white/5 border border-white/10 hover:bg-white/10"
+                                            )}
+                                        >
+                                            <AnimatePresence mode="wait">
+                                                {status === 'listening' ? (
                                                     <motion.div
-                                                        key={i}
-                                                        animate={{ height: [8, 24, 8] }}
-                                                        transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.1 }}
-                                                        className="w-1.5 bg-white rounded-full"
-                                                    />
-                                                ))}
-                                            </motion.div>
-                                        ) : (
-                                            <motion.div key="mic-icon" initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                                <Mic size={40} className="text-white" />
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </button>
-                            </div>
+                                                        key="listening-icon"
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        className="flex items-center gap-1"
+                                                    >
+                                                        {[1, 2, 3, 2, 1].map((h, i) => (
+                                                            <motion.div
+                                                                key={i}
+                                                                animate={{ height: [8, 24, 8] }}
+                                                                transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.1 }}
+                                                                className="w-1.5 bg-white rounded-full"
+                                                            />
+                                                        ))}
+                                                    </motion.div>
+                                                ) : (
+                                                    <motion.div key="mic-icon" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                                                        <Mic size={40} className="text-white" />
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </button>
+                                    </div>
 
-                            <div className="max-w-md space-y-4">
-                                <p className="text-sm font-medium text-white/50 leading-relaxed italic">
-                                    {query ? `"${query}"` : "Try saying: 'Find me an awkward silence with intense tension'"}
-                                </p>
-                                <div className="flex flex-wrap justify-center gap-2 opacity-40">
-                                    {['Angry Interview', 'Tense Standoff', 'Joyous Greeting'].map(tag => (
-                                        <span key={tag} className="px-3 py-1 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-white border border-white/5">
-                                            #{tag}
-                                        </span>
-                                    ))}
+                                    <div className="max-w-md space-y-4">
+                                        {error ? (
+                                            <div className="bg-danger/10 border border-danger/20 rounded-xl p-4 flex flex-col items-center gap-2">
+                                                <AlertTriangle size={20} className="text-danger" />
+                                                <span className="text-xs font-bold text-danger uppercase tracking-widest">{error}</span>
+                                                <button
+                                                    onClick={() => setShowManualInput(true)}
+                                                    className="mt-2 text-[10px] font-black underline uppercase tracking-widest text-editor-text"
+                                                >
+                                                    Use Manual Discovery instead
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p className="text-sm font-medium text-white/50 leading-relaxed italic">
+                                                    {query ? `"${query}"` : "Try saying: 'Find me an awkward silence with intense tension'"}
+                                                </p>
+                                                <button
+                                                    onClick={() => setShowManualInput(true)}
+                                                    className="text-[10px] font-black opacity-40 hover:opacity-100 transition-opacity uppercase tracking-[0.2em] text-white"
+                                                >
+                                                    or Type your Intent
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
+                            ) : (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="w-full max-w-xl flex flex-col items-center gap-6"
+                                >
+                                    <div className="w-full relative">
+                                        <textarea
+                                            autoFocus
+                                            value={query}
+                                            onChange={(e) => setQuery(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleNeuralSearch(query))}
+                                            placeholder="Describe the moment you're looking for..."
+                                            className="w-full bg-white/5 border border-white/10 rounded-3xl p-8 pt-10 text-xl font-bold text-white placeholder:text-white/20 focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none h-40"
+                                        />
+                                        <div className="absolute top-4 left-6 flex items-center gap-2">
+                                            <BrainCircuit size={12} className="text-primary" />
+                                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">Manual Neural Probe</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <button
+                                            onClick={() => handleNeuralSearch(query)}
+                                            className="btn-primary px-12 py-3 rounded-full flex items-center gap-3"
+                                        >
+                                            <Search size={20} />
+                                            Probe Timeline
+                                        </button>
+                                        <button
+                                            onClick={() => setShowManualInput(false)}
+                                            className="px-8 py-3 bg-white/5 rounded-full text-white text-sm font-bold hover:bg-white/10 transition-all"
+                                        >
+                                            Return to Voice
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            <div className="flex flex-wrap justify-center gap-2 opacity-40">
+                                {['Angry Interview', 'Tense Standoff', 'Joyous Greeting'].map(tag => (
+                                    <button
+                                        key={tag}
+                                        onClick={() => { setQuery(tag); handleNeuralSearch(tag); }}
+                                        className="px-3 py-1 bg-white/5 rounded-full text-[10px] font-black uppercase tracking-widest text-white border border-white/5 hover:border-primary/50 transition-colors"
+                                    >
+                                        #{tag}
+                                    </button>
+                                ))}
                             </div>
                         </motion.div>
                     ) : status === 'analyzing' ? (
@@ -212,7 +285,7 @@ export const NeuralVoiceSearch = () => {
                             {/* Results Grid */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
-                                    {results.map((result, idx) => (
+                                    {results.map((result: any, idx: number) => (
                                         <ResultCard key={idx} result={result} />
                                     ))}
                                 </div>
@@ -258,7 +331,7 @@ const IntentBadge = ({ icon: Icon, label, values, color }: { icon: any, label: s
             <Icon size={10} /> {label}
         </div>
         <div className="flex flex-wrap gap-1">
-            {values.length > 0 ? values.map(v => (
+            {values.length > 0 ? values.map((v: string) => (
                 <span key={v} className={cn("px-2 py-0.5 bg-white/5 rounded-md text-[9px] font-black uppercase tracking-widest", color)}>
                     {v}
                 </span>

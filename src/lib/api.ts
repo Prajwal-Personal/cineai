@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
 
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
@@ -38,6 +38,12 @@ export const api = {
     },
     script: {
         getCoverage: () => apiClient.get('/script/coverage'),
+        analyze: (formData: FormData) => apiClient.post('/script/upload', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        }),
+        generateStories: (text: string) => apiClient.post('/script/generate-stories', { text }),
     },
     intelligence: {
         getHeatmap: (takeId: number) => apiClient.get(`/intelligence/heatmap/${takeId}`),

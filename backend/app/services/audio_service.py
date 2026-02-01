@@ -101,8 +101,8 @@ class AudioService:
                     no_speech_threshold=0.6,
                     compression_ratio_threshold=2.4,
                     logprob_threshold=-1.0,
-                    language="en",
-                    initial_prompt="A professional film set with actors speaking clearly."
+                    language=None, # Auto-detect language
+                    initial_prompt="Namaste, Vanakkam, Sat Sri Akal, Aadab. This is a multi-lingual Indian script. Actor speaks in Hindi, Tamil, Telugu, and English transliterations like Hinglish."
                 )
                 
                 # Check segments for no_speech_prob

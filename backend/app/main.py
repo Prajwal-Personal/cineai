@@ -21,7 +21,7 @@ app.mount("/media_files", StaticFiles(directory=settings.STORAGE_PATH), name="me
 # Set all CORS enabled origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, this should be more restrictive
+    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS] if not settings.DEBUG else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -9,11 +9,13 @@ import { EmotionPerformance } from './pages/EmotionPerformance';
 import { ExportCenter } from './pages/ExportCenter';
 import { SemanticSearch } from './pages/SemanticSearch';
 import { NeuralVoiceSearch } from './pages/NeuralVoiceSearch';
+import { AcousticLab } from './pages/AcousticLab';
 
 // Additional Placeholders
 import { ReshootRisk } from './pages/ReshootRisk';
 import { TrainingLearning } from './pages/TrainingLearning';
 import { Settings } from './pages/Settings';
+import { ScriptAnalysis } from './pages/ScriptAnalysis';
 
 function App() {
   return (
@@ -27,8 +29,10 @@ function App() {
           <Route path="emotion" element={<EmotionPerformance />} />
           <Route path="search" element={<SemanticSearch />} />
           <Route path="neural-search" element={<NeuralVoiceSearch />} />
+          <Route path="audio-lab" element={<AcousticLab />} />
           <Route path="risk" element={<ReshootRisk />} />
           <Route path="training" element={<TrainingLearning />} />
+          <Route path="script-analysis" element={<ScriptAnalysis />} />
           <Route path="export" element={<ExportCenter />} />
           <Route path="settings" element={<Settings />} />
         </Route>
@@ -36,5 +40,6 @@ function App() {
     </BrowserRouter>
   );
 }
+
 
 export default App;

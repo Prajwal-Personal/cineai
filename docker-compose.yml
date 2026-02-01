@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/storage:/app/storage
+      - ./backend/smartcut.db:/app/smartcut.db
+    environment:
+      - DEBUG=false
+      - PROJECT_NAME=SmartCut AI
+      - DATABASE_URL=sqlite:////app/smartcut.db
+      - STORAGE_PATH=/app/storage
+    restart: always
+
+  # Frontend is usually deployed as static assets to a CDN (Vercel/Netlify),
+  # but for local production testing we can serve it too or just use 'npm run build'

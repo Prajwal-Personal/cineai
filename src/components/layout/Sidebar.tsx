@@ -14,7 +14,8 @@ import {
     Download,
     Settings,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    AudioWaveform
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { clsx, type ClassValue } from 'clsx';
@@ -27,16 +28,19 @@ function cn(...inputs: ClassValue[]) {
 const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
     { icon: Upload, label: 'Media Upload', path: '/upload' },
+    { icon: FileText, label: 'Script IQ', path: '/script-analysis' },
     { icon: Activity, label: 'AI Monitor', path: '/monitor' },
     // Timeline removed
     { icon: Smile, label: 'Emotion', path: '/emotion' },
     { icon: BrainCircuit, label: 'Neural Search', path: '/neural-search', highlight: true },
     { icon: Search, label: 'Semantic Search', path: '/search' },
+    { icon: AudioWaveform, label: 'Audio Lab', path: '/audio-lab', highlight: true },
     { icon: AlertTriangle, label: 'Reshoot Risk', path: '/risk', badge: '3' },
     { icon: GraduationCap, label: 'Academy', path: '/training' },
     { icon: Download, label: 'Export', path: '/export' },
     { icon: Settings, label: 'Settings', path: '/settings' },
 ];
+
 
 export const Sidebar = () => {
     const [collapsed, setCollapsed] = useState(false);

@@ -75,14 +75,14 @@ class NLPService:
         
         # Emotion Keyword Map (Valence/Arousal markers)
         emotion_map = {
-            "joy": ["happy", "wonderful", "great", "excellent", "love", "excited", "wow", "amazing", "good", "perfect", "laugh"],
-            "sadness": ["sad", "terrible", "bad", "unhappy", "cry", "regret", "lost", "broken", "sorrow", "miss", "alone"],
-            "anger": ["angry", "mad", "hate", "furious", "stop", "never", "annoyed", "frustrated", "yell", "aggressive"],
-            "fear": ["scared", "afraid", "danger", "help", "threat", "risk", "panic", "worry", "fear", "dark", "compromised"],
-            "disgust": ["gross", "disgusting", "ew", "hate", "sick", "revolt", "nasty", "vile", "appalling"],
-            "surprise": ["whoa", "surprise", "sudden", "unexpected", "what", "shook", "bright", "flash", "instant"],
-            "analytical": ["monitor", "system", "data", "analysis", "technical", "calibrate", "status", "report", "coordinate"],
-            "thoughtful": ["pensive", "contemplating", "considering", "listening", "hmm", "well", "think", "thought"]
+            "joy": ["happy", "wonderful", "great", "excellent", "love", "excited", "wow", "amazing", "good", "perfect", "laugh", "khush", "mazaa", "sundar", "badhiya", "magizhchi", "super", "kadupatti"],
+            "sadness": ["sad", "terrible", "bad", "unhappy", "cry", "regret", "lost", "broken", "sorrow", "miss", "alone", "dukh", "dard", "rona", "bekaar", "sogam", "varuththam"],
+            "anger": ["angry", "mad", "hate", "furious", "stop", "never", "annoyed", "frustrated", "yell", "aggressive", "gussa", "naraaz", "kobam", "athigaram"],
+            "fear": ["scared", "afraid", "danger", "help", "threat", "risk", "panic", "worry", "fear", "dark", "compromised", "darr", "ghabrahat", "payam", "achcham"],
+            "disgust": ["gross", "disgusting", "ew", "hate", "sick", "revolt", "nasty", "vile", "appalling", "ghinauna", "veruppu", "si"],
+            "surprise": ["whoa", "surprise", "sudden", "unexpected", "what", "shook", "bright", "flash", "instant", "achanak", "hairaan", "shock", "athirchi", "vinnakam"],
+            "analytical": ["monitor", "system", "data", "analysis", "technical", "calibrate", "status", "report", "coordinate", "jaanch", "parikshan", "ganana"],
+            "thoughtful": ["pensive", "contemplating", "considering", "listening", "hmm", "well", "think", "thought", "sochna", "vichar", "yosidhai", "ennam"]
         }
 
         scores = {emotion: 0 for emotion in emotion_map.keys()}
