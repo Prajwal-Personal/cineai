@@ -34,14 +34,20 @@ except ImportError:
 
 class AudioService:
     def __init__(self):
-        self.model = None
-        if WHISPER_AVAILABLE:
+        self._model = None
+        self._failed_to_load = False
+
+    def get_model(self):
+        """Lazy load the Whisper model only when needed."""
+        if self._model is None and not self._failed_to_load and WHISPER_AVAILABLE:
             try:
-                self.model = whisper.load_model("base")
+                logger.info("Initializing Whisper 'base' model (Lazy Load)...")
+                self._model = whisper.load_model("base")
+                logger.info("Whisper initialized successfully.")
             except Exception as e:
                 logger.warning(f"Failed to load Whisper model: {e}. Using mock transcription.")
-        else:
-            logger.info("Whisper not available. Using mock audio analysis.")
+                self._failed_to_load = True
+        return self._model
 
     async def analyze_audio(self, audio_path: str) -> Dict[str, Any]:
         """
@@ -88,10 +94,11 @@ class AudioService:
             "emphasis_detected": False
         }
         
-        if self.model:
+        model = self.get_model()
+        if model:
             try:
                 logger.info(f"Attempting AI transcription for: {audio_path}")
-                result = self.model.transcribe(
+                result = model.transcribe(
                     audio_path, 
                     temperature=0.0, 
                     beam_size=1, # Greedy search for speed on CPU

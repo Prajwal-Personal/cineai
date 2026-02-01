@@ -13,25 +13,33 @@ except ImportError:
 
 class NLPService:
     def __init__(self):
-        self.nlp = None
-        if SPACY_AVAILABLE:
+        self._nlp = None
+        self._failed_to_load = False
+
+    def get_nlp(self):
+        """Lazy load the spaCy model only when needed."""
+        if self._nlp is None and not self._failed_to_load and SPACY_AVAILABLE:
             try:
-                self.nlp = spacy.load("en_core_web_sm")
+                logger.info("Initializing spaCy 'en_core_web_sm' (Lazy Load)...")
+                self._nlp = spacy.load("en_core_web_sm")
+                logger.info("spaCy initialized successfully.")
             except Exception as e:
-                logger.warning(f"Failed to load spaCy model: {e}. Downloading...")
+                logger.warning(f"Failed to load spaCy model: {e}. Downloading on the fly...")
                 try:
                     import os
                     os.system("python -m spacy download en_core_web_sm")
-                    self.nlp = spacy.load("en_core_web_sm")
+                    self._nlp = spacy.load("en_core_web_sm")
                 except:
-                    logger.error("spaCy fallback failed.")
-                    self.nlp = None
+                    logger.error("spaCy fallback failed. Using mock NLP.")
+                    self._failed_to_load = True
+        return self._nlp
 
     async def align_script(self, transcript: str, script_text: str) -> Dict[str, Any]:
         """
         Compares transcript against target script using semantic similarity.
         """
-        if not SPACY_AVAILABLE or not self.nlp:
+        nlp = self.get_nlp()
+        if not SPACY_AVAILABLE or not nlp:
             # Mock behavior since we can't do semantic similarity without spacy
             return {
                 "similarity": 0.88,
@@ -48,8 +56,8 @@ class NLPService:
                 "confidence": 0.0
             }
 
-        doc_t = self.nlp(transcript.lower())
-        doc_s = self.nlp(script_text.lower())
+        doc_t = nlp(transcript.lower())
+        doc_s = nlp(script_text.lower())
 
         similarity = doc_t.similarity(doc_s)
 

@@ -50,14 +50,20 @@ logger = logging.getLogger(__name__)
 
 class CVService:
     def __init__(self):
-        self.model = None
-        if TORCH_AVAILABLE:
+        self._model = None
+        self._failed_to_load = False
+
+    def get_model(self):
+        """Lazy load the YOLO model only when needed."""
+        if self._model is None and not self._failed_to_load and TORCH_AVAILABLE:
             try:
-                self.model = YOLO('yolov8n.pt') 
+                logger.info("Initializing YOLOv8 model (Lazy Load)...")
+                self._model = YOLO('yolov8n.pt') 
+                logger.info("YOLOv8 initialized successfully.")
             except Exception as e:
-                logger.warning(f"Failed to load YOLO model: {e}. Using mock detection.")
-        else:
-            logger.info("PyTorch/YOLO not available. Using mock CV analysis.")
+                logger.warning(f"Failed to load YOLO model: {e}. Falling back to mock detection.")
+                self._failed_to_load = True
+        return self._model
 
     async def analyze_video(self, video_path: str) -> Dict[str, Any]:
         """
@@ -218,11 +224,12 @@ class CVService:
             blur_scores.append(blur_score)
 
             # 2. Object Detection
-            if self.model:
-                results = self.model(frame, verbose=False)
+            model = self.get_model()
+            if model:
+                results = model(frame, verbose=False)
                 for r in results:
                     for c in r.boxes.cls:
-                        detections.append(self.model.names[int(c)])
+                        detections.append(model.names[int(c)])
             else:
                 # Fallback: Heuristic object detection if AI model is missing
                 # We can't actually "detect" without the model, but we can provide 
@@ -265,7 +272,7 @@ class CVService:
             "blur_score": avg_blur,
             "reasoning": reasoning,
             "video_description": video_desc,
-            "confidence": 0.92 if self.model else 0.5
+            "confidence": 0.92 if self.get_model() else 0.5
         }
 
 cv_service = CVService()

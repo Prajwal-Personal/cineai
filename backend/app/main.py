@@ -19,10 +19,20 @@ if not os.path.exists(settings.STORAGE_PATH):
 app.mount("/media_files", StaticFiles(directory=settings.STORAGE_PATH), name="media_files")
 
 # Set all CORS enabled origins
+# NOTE: allow_credentials=True cannot be used with allow_origins=["*"]
+cors_origins = [str(origin) for origin in settings.BACKEND_CORS_ORIGINS]
+
+# If in debug mode or we have no origins, allow more liberally but safely
+if settings.DEBUG or not cors_origins:
+    # In debug, we still want credentials for local testing, so we can't use "*"
+    # Starlette automatically handles the response header to match the request origin 
+    # if we don't use ["*"]
+    cors_origins = ["*"] if not cors_origins else cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS] if not settings.DEBUG else ["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=True if cors_origins != ["*"] else False, # Absolute safety
     allow_methods=["*"],
     allow_headers=["*"],
 )

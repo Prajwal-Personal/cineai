@@ -13,10 +13,11 @@ class Settings(BaseSettings):
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/smartcut")
     STORAGE_PATH: str = os.getenv("STORAGE_PATH", "./storage")
-    BACKEND_CORS_ORIGINS: Any = [
+    BACKEND_CORS_ORIGINS: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
+        "https://cineai-beige.vercel.app",
     ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
