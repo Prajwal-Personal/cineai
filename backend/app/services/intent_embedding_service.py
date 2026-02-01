@@ -9,9 +9,7 @@ import json
 
 logger = logging.getLogger(__name__)
 
-# Lazy loading for sentence-transformers (heavy import)
-_sentence_model = None
-
+# Defer import to method
 def get_sentence_model():
     global _sentence_model
     if _sentence_model is None:

@@ -3,34 +3,7 @@ from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
-# Optional ML imports
-try:
-    import whisper
-    import imageio_ffmpeg
-    import os
-    # Inject ffmpeg path from imageio-ffmpeg so Whisper can find it
-    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-    ffmpeg_dir = os.path.dirname(ffmpeg_exe)
-    target_ffmpeg = os.path.join(ffmpeg_dir, "ffmpeg.exe")
-    if not os.path.exists(target_ffmpeg):
-        try:
-            import shutil
-            shutil.copy(ffmpeg_exe, target_ffmpeg)
-            logger.info(f"Created ffmpeg.exe at {target_ffmpeg}")
-        except Exception as e:
-            logger.warning(f"Failed to create ffmpeg.exe: {e}")
-    
-    os.environ["PATH"] += os.pathsep + ffmpeg_dir
-    WHISPER_AVAILABLE = True
-except ImportError:
-    WHISPER_AVAILABLE = False
-
-try:
-    import librosa
-    import numpy as np
-    LIBROSA_AVAILABLE = True
-except ImportError:
-    LIBROSA_AVAILABLE = False
+# Heavy imports deferred to method scope
 
 class AudioService:
     def __init__(self):
@@ -39,8 +12,25 @@ class AudioService:
 
     def get_model(self):
         """Lazy load the Whisper model only when needed."""
-        if self._model is None and not self._failed_to_load and WHISPER_AVAILABLE:
+        if self._model is None and not self._failed_to_load:
             try:
+                import whisper
+                import imageio_ffmpeg
+                import os
+                # Inject ffmpeg path from imageio-ffmpeg so Whisper can find it
+                ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+                ffmpeg_dir = os.path.dirname(ffmpeg_exe)
+                target_ffmpeg = os.path.join(ffmpeg_dir, "ffmpeg.exe")
+                if not os.path.exists(target_ffmpeg):
+                    try:
+                        import shutil
+                        shutil.copy(ffmpeg_exe, target_ffmpeg)
+                        logger.info(f"Created ffmpeg.exe at {target_ffmpeg}")
+                    except Exception as e:
+                        logger.warning(f"Failed to create ffmpeg.exe: {e}")
+                
+                os.environ["PATH"] += os.pathsep + ffmpeg_dir
+                
                 logger.info("Initializing Whisper 'base' model (Lazy Load)...")
                 self._model = whisper.load_model("base")
                 logger.info("Whisper initialized successfully.")
@@ -72,16 +62,23 @@ class AudioService:
         # 1. Technical Analysis (librosa)
         audio_quality = 70.0 
         duration = 0.0
-        if LIBROSA_AVAILABLE:
-            try:
-                y, sr = librosa.load(audio_path, sr=None)
-                duration = librosa.get_duration(y=y, sr=sr)
-                rms = librosa.feature.rms(y=y)
-                avg_rms = np.mean(rms)
-                clipping = np.sum(np.abs(y) > 0.99) / len(y)
-                audio_quality = max(0, min(100, (avg_rms * 1000) * (1 - clipping)))
-            except Exception as e:
-                logger.error(f"Librosa analysis failed: {e}")
+        # 1. Technical Analysis (librosa)
+        audio_quality = 70.0 
+        duration = 0.0
+        
+        try:
+            import librosa
+            import numpy as np
+            y, sr = librosa.load(audio_path, sr=None)
+            duration = librosa.get_duration(y=y, sr=sr)
+            rms = librosa.feature.rms(y=y)
+            avg_rms = np.mean(rms)
+            clipping = np.sum(np.abs(y) > 0.99) / len(y)
+            audio_quality = max(0, min(100, (avg_rms * 1000) * (1 - clipping)))
+        except ImportError:
+             pass
+        except Exception as e:
+            logger.error(f"Librosa analysis failed: {e}")
         
         source = "mock_pool"
         transcript = ""

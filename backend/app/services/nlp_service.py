@@ -3,14 +3,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Optional ML imports
-try:
-    import spacy
-    SPACY_AVAILABLE = True
-except ImportError:
-    SPACY_AVAILABLE = False
-    logger.warning("spaCy not available. Using mock NLP analysis.")
-
+# Heavy imports deferred to method scope
 class NLPService:
     def __init__(self):
         self._nlp = None
@@ -18,8 +11,9 @@ class NLPService:
 
     def get_nlp(self):
         """Lazy load the spaCy model only when needed."""
-        if self._nlp is None and not self._failed_to_load and SPACY_AVAILABLE:
+        if self._nlp is None and not self._failed_to_load:
             try:
+                import spacy
                 logger.info("Initializing spaCy 'en_core_web_sm' (Lazy Load)...")
                 self._nlp = spacy.load("en_core_web_sm")
                 logger.info("spaCy initialized successfully.")
@@ -39,7 +33,7 @@ class NLPService:
         Compares transcript against target script using semantic similarity.
         """
         nlp = self.get_nlp()
-        if not SPACY_AVAILABLE or not nlp:
+        if not nlp:
             # Mock behavior since we can't do semantic similarity without spacy
             return {
                 "similarity": 0.88,

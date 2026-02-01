@@ -14,13 +14,7 @@ from app.services.visual_embedding_service import visual_embedding_service
 
 logger = logging.getLogger(__name__)
 
-# Optional ML imports
-try:
-    import faiss
-    FAISS_AVAILABLE = True
-except ImportError:
-    FAISS_AVAILABLE = False
-    logger.warning("FAISS not available. Using mock vector search.")
+# Heavy imports deferred to method scope
 
 
 @dataclass
@@ -109,7 +103,14 @@ class SemanticSearchService:
         
         meta_exists = os.path.exists(self.METADATA_PATH)
         
-        if FAISS_AVAILABLE and os.path.exists(self.INDEX_PATH) and meta_exists:
+        # Check FAISS inside method
+        try:
+            import faiss
+            faiss_avail = True
+        except ImportError:
+            faiss_avail = False
+
+        if faiss_avail and os.path.exists(self.INDEX_PATH) and meta_exists:
             try:
                 self.index = faiss.read_index(self.INDEX_PATH)
                 with open(self.METADATA_PATH, "rb") as f:
@@ -133,18 +134,27 @@ class SemanticSearchService:
     
     def _create_new_index(self):
         """Create a new FAISS index (or mock)."""
-        if FAISS_AVAILABLE:
+        try:
+            import faiss
             self.index = faiss.IndexFlatIP(self.dimension)
-        else:
+            mode = 'FAISS'
+        except ImportError:
             # Use Numpy fallback
             self.index = NumpyIndex(self.dimension)
+            mode = 'MOCK'
             
         self.metadata = []
-        logger.info(f"Created new {'FAISS' if FAISS_AVAILABLE else 'MOCK'} index")
+        logger.info(f"Created new {mode} index")
     
     def _load_visual_index(self):
         """Load or create visual index for CLIP embeddings."""
-        if not FAISS_AVAILABLE:
+        try:
+            import faiss
+            faiss_avail = True
+        except ImportError:
+            faiss_avail = False
+
+        if not faiss_avail:
             # Use NumpyIndex for visual features too
             self.visual_index = NumpyIndex(self.visual_dimension)
             # Try to load if embeddings exist
@@ -199,8 +209,12 @@ class SemanticSearchService:
     def save_index(self):
         """Persist index to disk."""
         os.makedirs("./storage", exist_ok=True)
-        if FAISS_AVAILABLE and self.index != "MOCK_INDEX":
-            faiss.write_index(self.index, self.INDEX_PATH)
+        try:
+            import faiss
+            if self.index != "MOCK_INDEX" and isinstance(self.index, faiss.Index):
+                faiss.write_index(self.index, self.INDEX_PATH)
+        except ImportError:
+            pass
         
         with open(self.METADATA_PATH, "wb") as f:
             pickle.dump(self.metadata, f)
@@ -315,10 +329,15 @@ class SemanticSearchService:
         if not self.metadata:
             return []
             
-        if self.index.ntotal > 0 or (not FAISS_AVAILABLE and self.metadata):
-            # Check if using Mock Embeddings (heuristic check or config)
-            # If FAISS is missing, we are definitely using Mock/Numpy index with random vectors.
-            if not FAISS_AVAILABLE:
+        if self.index.ntotal > 0 or (not isinstance(self.index, faiss.Index) and self.metadata):
+             # Check if using Mock Embeddings
+            try:
+                import faiss
+                is_faiss = isinstance(self.index, faiss.Index)
+            except ImportError:
+                 is_faiss = False
+            
+            if not is_faiss:
                 logger.info("Using Keyword Fallback Search (FAISS unavailable)")
                 return self._keyword_search(query, top_k, filters)
 

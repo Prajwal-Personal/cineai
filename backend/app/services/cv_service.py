@@ -2,49 +2,7 @@ import logging
 import os
 from typing import List, Dict, Any
 
-# Optional ML imports - may not be available in all environments
-try:
-    import cv2
-    import numpy as np
-    CV2_AVAILABLE = True
-except ImportError:
-    CV2_AVAILABLE = False
-
-try:
-    import torch
-    from ultralytics import YOLO
-    TORCH_AVAILABLE = True
-    
-    # Fix for PyTorch 2.6+ security update
-    try:
-        from ultralytics.nn.tasks import DetectionModel
-        import ultralytics.nn.modules.conv as conv_layers
-        import ultralytics.nn.modules.block as block_layers
-        import ultralytics.nn.modules.head as head_layers
-        import torch.nn as nn
-        
-        if hasattr(torch.serialization, 'add_safe_globals'):
-            torch.serialization.add_safe_globals([
-                DetectionModel,
-                conv_layers.Conv,
-                conv_layers.Concat,
-                block_layers.C2f,
-                block_layers.Bottleneck,
-                block_layers.DFL,
-                block_layers.SPPF,
-                nn.modules.container.Sequential,
-                nn.modules.container.ModuleList,
-                nn.modules.conv.Conv2d,
-                nn.modules.batchnorm.BatchNorm2d,
-                nn.modules.activation.SiLU,
-                nn.modules.pooling.MaxPool2d,
-                nn.modules.upsampling.Upsample,
-                head_layers.Detect
-            ])
-    except (ImportError, AttributeError):
-        pass
-except ImportError:
-    TORCH_AVAILABLE = False
+# Imports deferred to methods to prevent startup timeout
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +13,41 @@ class CVService:
 
     def get_model(self):
         """Lazy load the YOLO model only when needed."""
-        if self._model is None and not self._failed_to_load and TORCH_AVAILABLE:
+        if self._model is None and not self._failed_to_load:
             try:
+                # Late import to speed up startup
+                import torch
+                from ultralytics import YOLO
+                
+                # Fix for PyTorch 2.6+ security update
+                try:
+                    from ultralytics.nn.tasks import DetectionModel
+                    import ultralytics.nn.modules.conv as conv_layers
+                    import ultralytics.nn.modules.block as block_layers
+                    import ultralytics.nn.modules.head as head_layers
+                    import torch.nn as nn
+                    
+                    if hasattr(torch.serialization, 'add_safe_globals'):
+                        torch.serialization.add_safe_globals([
+                            DetectionModel,
+                            conv_layers.Conv,
+                            conv_layers.Concat,
+                            block_layers.C2f,
+                            block_layers.Bottleneck,
+                            block_layers.DFL,
+                            block_layers.SPPF,
+                            nn.modules.container.Sequential,
+                            nn.modules.container.ModuleList,
+                            nn.modules.conv.Conv2d,
+                            nn.modules.batchnorm.BatchNorm2d,
+                            nn.modules.activation.SiLU,
+                            nn.modules.pooling.MaxPool2d,
+                            nn.modules.upsampling.Upsample,
+                            head_layers.Detect
+                        ])
+                except (ImportError, AttributeError):
+                    pass
+
                 logger.info("Initializing YOLOv8 model (Lazy Load)...")
                 self._model = YOLO('yolov8n.pt') 
                 logger.info("YOLOv8 initialized successfully.")
@@ -70,8 +61,14 @@ class CVService:
         Samples frames and runs object detection/quality analysis.
         Returns mock data when ML dependencies are not available.
         """
-        if not CV2_AVAILABLE:
-            logger.info("OpenCV not available, performing basic file analysis")
+        if True: # Always attempt, but check import inside
+            try:
+                import cv2
+                import numpy as np
+                CV2_AVAILABLE = True
+            except ImportError:
+                CV2_AVAILABLE = False
+                logger.info("OpenCV not available, performing basic file analysis")
             
             try:
                 # Basic File Analysis (Non-AI)
