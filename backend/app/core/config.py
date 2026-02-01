@@ -23,8 +23,19 @@ class Settings(BaseSettings):
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Any) -> list[str]:
+        default_origins = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:3000",
+            "https://cineai-beige.vercel.app",
+        ]
+        
+        if not v:
+            return default_origins
+            
         if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",") if i.strip()]
+            origins = [i.strip() for i in v.split(",") if i.strip()]
+            return origins if origins else default_origins
         elif isinstance(v, list):
             return [str(i) for i in v]
         elif isinstance(v, str) and v.startswith("["):
@@ -35,12 +46,7 @@ class Settings(BaseSettings):
                     return [str(i) for i in data]
             except:
                 pass
-        return [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:3000",
-            "https://cineai-beige.vercel.app",
-        ]
+        return default_origins
 
     class Config:
         case_sensitive = True

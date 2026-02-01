@@ -13,28 +13,19 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-# 1. Manual CORS Interceptor for OPTIONS requests (Definitive Fix)
-@app.middleware("http")
-async def manual_cors_middleware(request: Request, call_next):
-    if request.method == "OPTIONS":
-        response = Response()
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.status_code = 200
-        return response
-    
-    response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return response
+# Assemble CORS origins from config
+cors_origins = settings.BACKEND_CORS_ORIGINS
+if isinstance(cors_origins, str):
+    cors_origins = [i.strip() for i in cors_origins.split(",") if i.strip()]
 
-# 2. Official CORSMiddleware (Secondary Guard)
+# Standard CORS Middleware with explicit origins and credentials enabled
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=[str(origin).rstrip("/") for origin in cors_origins],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Mount media storage
@@ -53,6 +44,7 @@ def startup_event():
     """Create all database tables on startup and log config"""
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables created successfully!")
-    print(f"🚀 CORS Origins: ['*'] (Liberal Mode)")
-    print(f"📡 API Path: {settings.API_V1_STR}")
+    print(f"🚀 CORS Origins: {settings.BACKEND_CORS_ORIGINS}")
+    print(f"📡 API Path Prefix: {settings.API_V1_STR}")
     print(f"🛠️ Debug Mode: {settings.DEBUG}")
+    print(f"📂 Storage Path: {settings.STORAGE_PATH}")
