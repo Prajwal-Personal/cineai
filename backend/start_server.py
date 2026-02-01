@@ -63,8 +63,10 @@ if __name__ == "__main__":
         # Railway/Render/Fly.io inject PORT env var. Must listen on this port.
         port = int(os.environ.get("PORT", 8000))
         print(f"🚀 Starting SmartCut AI Backend on PORT: {port}")
+        print(f"🔍 Python Executable: {sys.executable}")
+        print(f"🔍 System Path: {sys.path}")
         
-        uvicorn.run(app, host="0.0.0.0", port=port)
+        uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug")
     except Exception as e:
         print(f"🔥 FATAL ERROR DURING STARTUP: {e}")
         import traceback
