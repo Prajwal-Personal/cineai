@@ -59,5 +59,6 @@ if __name__ == "__main__":
     # Import app AFTER patching
     from app.main import app
     print("🚀 Starting SmartCut AI Backend...")
-    # Run uvicorn programmatically on the app object directly
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Railway/Render/Fly.io inject PORT env var. Must listen on this port.
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
