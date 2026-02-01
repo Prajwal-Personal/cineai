@@ -21,12 +21,20 @@ class Settings(BaseSettings):
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Any) -> list[str] | str:
+    def assemble_cors_origins(cls, v: Any) -> list[str]:
         if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
-        raise ValueError(v)
+            return [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return [str(i) for i in v]
+        elif isinstance(v, str) and v.startswith("["):
+            import json
+            try:
+                data = json.loads(v)
+                if isinstance(data, list):
+                    return [str(i) for i in data]
+            except:
+                pass
+        return []
 
     class Config:
         case_sensitive = True

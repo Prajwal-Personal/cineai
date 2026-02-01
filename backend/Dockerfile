@@ -30,6 +30,10 @@ RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/wh
 # Copy the rest of the application code
 COPY backend/ .
 
+# Pre-download ML models to prevent startup timeouts
+RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')" && \
+    python -m spacy download en_core_web_sm
+
 # Expose the port the app runs on
 EXPOSE 8000
 
