@@ -30,23 +30,24 @@ class Settings(BaseSettings):
             "https://cineai-beige.vercel.app",
         ]
         
-        if not v:
-            return default_origins
-            
+        # MERGE STRATEGY: Combine Defaults + Env Vars
+        # This prevents the Env Var from accidentally locking out localhost or the main domain.
+        env_origins = []
         if isinstance(v, str) and not v.startswith("["):
-            origins = [i.strip() for i in v.split(",") if i.strip()]
-            return origins if origins else default_origins
+            env_origins = [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
-            return [str(i) for i in v]
+            env_origins = [str(i) for i in v]
         elif isinstance(v, str) and v.startswith("["):
             import json
             try:
                 data = json.loads(v)
                 if isinstance(data, list):
-                    return [str(i) for i in data]
+                    env_origins = [str(i) for i in data]
             except:
                 pass
-        return default_origins
+        
+        # Combine unique origins
+        return list(set(default_origins + env_origins))
 
     class Config:
         case_sensitive = True
