@@ -19,20 +19,12 @@ if not os.path.exists(settings.STORAGE_PATH):
 app.mount("/media_files", StaticFiles(directory=settings.STORAGE_PATH), name="media_files")
 
 # Set all CORS enabled origins
-# NOTE: allow_credentials=True cannot be used with allow_origins=["*"]
-cors_origins = [str(origin) for origin in settings.BACKEND_CORS_ORIGINS]
-
-# If in debug mode or we have no origins, allow more liberally but safely
-if settings.DEBUG or not cors_origins:
-    # In debug, we still want credentials for local testing, so we can't use "*"
-    # Starlette automatically handles the response header to match the request origin 
-    # if we don't use ["*"]
-    cors_origins = ["*"] if not cors_origins else cors_origins
-
+# Using a liberal Power-CORS policy for hackathon reliability.
+# Since the frontend doesn't use credentials (cookies), allow_origins=["*"] is safe and robust.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True if cors_origins != ["*"] else False, # Absolute safety
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -45,6 +37,9 @@ async def root():
 
 @app.on_event("startup")
 def startup_event():
-    """Create all database tables on startup"""
+    """Create all database tables on startup and log config"""
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables created successfully!")
+    print(f"🚀 CORS Origins: ['*'] (Liberal Mode)")
+    print(f"📡 API Path: {settings.API_V1_STR}")
+    print(f"🛠️ Debug Mode: {settings.DEBUG}")
