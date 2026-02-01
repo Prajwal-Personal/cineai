@@ -22,24 +22,26 @@ try:
         import ultralytics.nn.modules.block as block_layers
         import ultralytics.nn.modules.head as head_layers
         import torch.nn as nn
-        torch.serialization.add_safe_globals([
-            DetectionModel,
-            conv_layers.Conv,
-            conv_layers.Concat,
-            block_layers.C2f,
-            block_layers.Bottleneck,
-            block_layers.DFL,
-            block_layers.SPPF,
-            nn.modules.container.Sequential,
-            nn.modules.container.ModuleList,
-            nn.modules.conv.Conv2d,
-            nn.modules.batchnorm.BatchNorm2d,
-            nn.modules.activation.SiLU,
-            nn.modules.pooling.MaxPool2d,
-            nn.modules.upsampling.Upsample,
-            head_layers.Detect
-        ])
-    except ImportError:
+        
+        if hasattr(torch.serialization, 'add_safe_globals'):
+            torch.serialization.add_safe_globals([
+                DetectionModel,
+                conv_layers.Conv,
+                conv_layers.Concat,
+                block_layers.C2f,
+                block_layers.Bottleneck,
+                block_layers.DFL,
+                block_layers.SPPF,
+                nn.modules.container.Sequential,
+                nn.modules.container.ModuleList,
+                nn.modules.conv.Conv2d,
+                nn.modules.batchnorm.BatchNorm2d,
+                nn.modules.activation.SiLU,
+                nn.modules.pooling.MaxPool2d,
+                nn.modules.upsampling.Upsample,
+                head_layers.Detect
+            ])
+    except (ImportError, AttributeError):
         pass
 except ImportError:
     TORCH_AVAILABLE = False
