@@ -1,0 +1,9 @@
+node_modules/
+backend/storage/
+backend/smartcut.db
+.git/
+.claude/
+.gemini/
+__pycache__/
+*.log
+dist/

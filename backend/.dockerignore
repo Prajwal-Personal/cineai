@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+storage/
+smartcut.db
+node_modules/
+.git/
+.claude/
+.gemini/
+*.log
