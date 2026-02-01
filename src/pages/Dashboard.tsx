@@ -85,10 +85,24 @@ export const Dashboard = () => {
                     api.media.listTakes(),
                     api.intelligence.getProjectInsights()
                 ]);
-                setTakes(takesRes.data);
-                setCues(insightsRes.data.vocal_cues);
-                setPacing(insightsRes.data.pacing_comparison);
-                setSignature(insightsRes.data.active_signature);
+
+                // Defensive guards: Ensure we always have arrays before setting state
+                if (takesRes.data && Array.isArray(takesRes.data)) {
+                    setTakes(takesRes.data);
+                }
+
+                if (insightsRes.data) {
+                    const data = insightsRes.data;
+                    if (data.vocal_cues && Array.isArray(data.vocal_cues)) {
+                        setCues(data.vocal_cues);
+                    }
+                    if (data.pacing_comparison && Array.isArray(data.pacing_comparison)) {
+                        setPacing(data.pacing_comparison);
+                    }
+                    if (data.active_signature) {
+                        setSignature(data.active_signature);
+                    }
+                }
             } catch (err) {
                 console.error("Failed to fetch dashboard data", err);
             } finally {
