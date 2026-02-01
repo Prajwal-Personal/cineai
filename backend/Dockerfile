@@ -22,7 +22,10 @@ WORKDIR /app
 
 # Install Python dependencies
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch==2.3.1 \
+    torchvision==0.18.1 \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY backend/ .
