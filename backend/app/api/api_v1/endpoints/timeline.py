@@ -6,7 +6,7 @@ from app.models import database as models
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("")
 def get_timeline(db: Session = Depends(deps.get_db)):
     project = db.query(models.Project).first()
     if not project:

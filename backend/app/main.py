@@ -1,5 +1,4 @@
-import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.api_v1.api import api_router
@@ -13,14 +12,22 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-# Mount media storage
-if not os.path.exists(settings.STORAGE_PATH):
-    os.makedirs(settings.STORAGE_PATH, exist_ok=True)
-app.mount("/media_files", StaticFiles(directory=settings.STORAGE_PATH), name="media_files")
+# 1. Manual CORS Interceptor for OPTIONS requests (Definitive Fix)
+@app.middleware("http")
+async def manual_cors_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        response = Response()
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.status_code = 200
+        return response
+    
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
 
-# Set all CORS enabled origins
-# Using a liberal Power-CORS policy for hackathon reliability.
-# Since the frontend doesn't use credentials (cookies), allow_origins=["*"] is safe and robust.
+# 2. Official CORSMiddleware (Secondary Guard)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,6 +35,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount media storage
+if not os.path.exists(settings.STORAGE_PATH):
+    os.makedirs(settings.STORAGE_PATH, exist_ok=True)
+app.mount("/media_files", StaticFiles(directory=settings.STORAGE_PATH), name="media_files")
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

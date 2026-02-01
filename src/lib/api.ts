@@ -40,14 +40,6 @@ export const api = {
                 },
             });
         },
-        listTakes: () => apiClient.get('/media/'),
-    },
-    processing: {
-        getStatus: (takeId: number) => apiClient.get(`/processing/status/${takeId}`),
-        start: (takeId: number) => apiClient.post(`/processing/start/${takeId}`),
-    },
-    timeline: {
-        get: () => apiClient.get('/timeline/'),
         override: (takeId: number, data: { is_accepted: string; notes?: string }) =>
             apiClient.post(`/timeline/override/${takeId}`, data),
     },

@@ -61,7 +61,7 @@ async def upload_media(
     
     return take
 
-@router.get("/", response_model=List[schemas.Take])
+@router.get("", response_model=List[schemas.Take])
 async def get_takes(
     db: Session = Depends(deps.get_db)
 ):
