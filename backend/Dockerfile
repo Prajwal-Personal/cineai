@@ -6,14 +6,15 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
     ffmpeg \
     libsm6 \
     libxext6 \
-    libgl1 \
     libglib2.0-0 \
     gcc \
     python3-dev \
+    libpq-dev \
+    dos2unix \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -39,7 +40,7 @@ EXPOSE 8000
 
 # Copy startup script and make executable
 COPY backend/start.sh .
-RUN chmod +x start.sh
+RUN dos2unix start.sh && chmod +x start.sh
 
 # Command to run the application
 CMD ["./start.sh"]
