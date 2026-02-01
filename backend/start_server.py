@@ -55,10 +55,18 @@ apply_pydantic_patch()
 sys.path.append(os.getcwd())
 
 if __name__ == "__main__":
-    import uvicorn
-    # Import app AFTER patching
-    from app.main import app
-    print("🚀 Starting SmartCut AI Backend...")
-    # Railway/Render/Fly.io inject PORT env var. Must listen on this port.
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    try:
+        import uvicorn
+        # Import app AFTER patching
+        from app.main import app
+        
+        # Railway/Render/Fly.io inject PORT env var. Must listen on this port.
+        port = int(os.environ.get("PORT", 8000))
+        print(f"🚀 Starting SmartCut AI Backend on PORT: {port}")
+        
+        uvicorn.run(app, host="0.0.0.0", port=port)
+    except Exception as e:
+        print(f"🔥 FATAL ERROR DURING STARTUP: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

@@ -37,6 +37,9 @@ RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')" && \
 # Expose the port the app runs on
 EXPOSE 8000
 
+# Copy startup script and make executable
+COPY backend/start.sh .
+RUN chmod +x start.sh
+
 # Command to run the application
-# We use start_server.py because it contains the Pydantic monkeypatch
-CMD ["python", "start_server.py"]
+CMD ["./start.sh"]
