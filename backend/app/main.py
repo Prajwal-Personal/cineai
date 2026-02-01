@@ -13,12 +13,11 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
-# Wildcard CORS - The safest bet for Hackathon connectivity
-# We disable credentials (cookies) to allow usage of ["*"]
+# Explicit CORS - More robust than wildcard for production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
@@ -45,7 +44,8 @@ def startup_event():
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables created successfully!")
     print("✅ Database tables created successfully!")
-    print(f"🚀 CORS Policy: Wildcard ['*'] (Credentials Disabled)")
+    print(f"🚀 CORS Policy: Explicit Origins (Credentials Enabled)")
+    print(f"🌐 Allowed Origins: {[str(origin) for origin in settings.BACKEND_CORS_ORIGINS]}")
     print(f"📡 API Path Prefix: {settings.API_V1_STR}")
     print(f"🛠️ Debug Mode: {settings.DEBUG}")
     print(f"📂 Storage Path: {settings.STORAGE_PATH}")
