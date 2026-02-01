@@ -2,9 +2,12 @@ import axios from 'axios';
 
 let base_url = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
-// Ensure it has a protocol
-if (base_url && !base_url.startsWith('http')) {
-    base_url = `https://${base_url}`;
+// Force upgrade to HTTPS for production domains (non-localhost)
+if (base_url && !base_url.includes('localhost') && !base_url.includes('127.0.0.1')) {
+    base_url = base_url.replace('http://', 'https://');
+    if (!base_url.startsWith('https://')) {
+        base_url = `https://${base_url}`;
+    }
 }
 
 // Ensure it ends with /api/v1
