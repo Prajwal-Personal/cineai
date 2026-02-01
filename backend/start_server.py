@@ -60,13 +60,19 @@ if __name__ == "__main__":
         # Import app AFTER patching
         from app.main import app
         
-        # Railway/Render/Fly.io inject PORT env var. Must listen on this port.
-        port = int(os.environ.get("PORT", 8000))
-        print(f"🚀 Starting SmartCut AI Backend on PORT: {port}")
+        # CRITICAL FIX: Railway UI says Port 8000, but PORT env var is coming as 8080.
+        # We MUST listen on 8000 to match the Load Balancer's expectation.
+        # port = int(os.environ.get("PORT", 8000)) 
+        
+        target_port = 8000
+        print(f"🚀 Starting SmartCut AI Backend on FIXED PORT: {target_port}")
         print(f"🔍 Python Executable: {sys.executable}")
         print(f"🔍 System Path: {sys.path}")
         
-        uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug")
+        if os.environ.get("PORT") and os.environ.get("PORT") != str(target_port):
+            print(f"⚠️ WARNING: Ignoring PORT environment variable ({os.environ.get('PORT')}) to match Railway Config ({target_port})")
+
+        uvicorn.run(app, host="0.0.0.0", port=target_port, log_level="debug")
     except Exception as e:
         print(f"🔥 FATAL ERROR DURING STARTUP: {e}")
         import traceback
